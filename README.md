@@ -53,26 +53,27 @@ Fundamental Data | NA: Unexposed data feed
 Display Groups| NA: Unexposed data feed
 
  
+### Endpoint Details
 The endpoints of each implemented group is documented below.  
 
  
-### /market
 #### GET /market/{tickerId}
 A GET request {tickerId}'s market data will generate a `reqMktData()` EClient call, then wait for all appropriate `tick*()` EWrapper messages to return (price, size, optionComputation, etc).  At that point, an EClient `cancelMktData` message will be sent to the server and an HTTP response will be returned.
  
-### /order
-#### GET
+#### GET /order
 A GET request retrieves a details for all open orders via `reqAllOpenOrders`.
 
-#### POST
+#### POST /order
 A POST request will generate a `placeOrder()` EClient call, then wait for the order to be filled .
 
-#### DELETE
+#### DELETE /order
 A DELETE request will call `cancelOrder()`.
 
-### /portfolio
+#### GET /portfolio/updates
 A GET request to `/portfolio/updates` will use `reqAccountUpdates()` to return messages received from `updateAccountValue/AccountTime()` and `updatePortfolio` EWrapper messages, as triggered by `accountDownloadEnd()`.
 
+#### GET /portfolio/summary
 A GET request to `/portfolio/summary` will use `reqAccountSummary()` to return messages received from `updateSummary()` EWrapper message as triggered by `accountSummaryEnd()`.
 
+#### GET /portfolio/positions
 A GET request to `/portfolio/positions` will use `reqPostions()` to return messages received from `position()` EWrapper message as triggered by `positionEnd()`.
