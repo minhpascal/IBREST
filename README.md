@@ -1,4 +1,4 @@
-# ibrest
+# IBREST
 REST API for use with [Interactive Brokers TWS and IB Gateway](https://www.interactivebrokers.com/en/index.php?f=5041&ns=T)
 
 ## Summary
@@ -13,7 +13,7 @@ This API layer between your algorithm code and the IbPy API code is intended for
 TODO: Consider using following GAE features:
 1. [Logging messages to GAE logger](https://cloud.google.com/logging/docs/agent/installation)
 2. [Storing IB messages to DataStore](https://cloud.google.com/datastore/docs/getstarted/start_python/)
-3. [Using Task Queue to get requests from GAE](https://cloud.google.com/appengine/docs/java/taskqueue/rest/about_auth).  IB allows 6 `client_ids`, which will impose a limit of 9 "simultaneous" tasks at a time with ibrest, unless some kind of task queuing happens (ie [Celery](http://flask.pocoo.org/docs/0.10/patterns/celery/))
+3. [Using Task Queue to get requests from GAE](https://cloud.google.com/appengine/docs/java/taskqueue/rest/about_auth).  IB allows 6 `client_ids`, which will impose a limit of 9 "simultaneous" tasks at a time with IBREST, unless some kind of task queuing happens (ie [Celery](http://flask.pocoo.org/docs/0.10/patterns/celery/))
  
 ### Synchronous
 The [IB API](https://www.interactivebrokers.com/en/software/api/api.htm) is designed to be _a_synchronous, which adds labor to writing code to interface with it.  As IB message exchanges are pretty fast (a couple seconds at most), it's within time margins for use with HTTP requests (~60sec timeouts).  Thus, the exposed RESTful API opens a user-friendly synchronous interface with IB.
@@ -22,7 +22,7 @@ The [IB API](https://www.interactivebrokers.com/en/software/api/api.htm) is desi
 Use [IbPyOptional](https://code.google.com/p/ibpy/wiki/IbPyOptional) (`ib.opt` module) maximally. 
 
 ## REST API
-As ibrest is built with IbPy, and IbPy is based on the IB Java API, then ibrest will aim to use maximally similar language as found in those APIs' documentation.  The Java API is broken into two main layers:
+As IBREST is built with IbPy, and IbPy is based on the IB Java API, then IBREST will aim to use maximally similar language as found in those APIs' documentation.  The Java API is broken into two main layers:
 1. [EClientSocket](https://www.interactivebrokers.com/en/software/api/apiguide/java/java_eclientsocket_methods.htm) - the connection to TWS for sending messages to IB. 
 2. [EWrapper](https://www.interactivebrokers.com/en/software/api/apiguide/java/java_ewrapper_methods.htm) - the message processing logic for messages returned by IB.  Some messages are streamed in at intervals (ie subscriptions) and will not be exposed as a REST URI.  Such are maked `Unexposed data feed` below. 
 
@@ -33,7 +33,7 @@ TODO: Consider creating an RSS feed endpoint for such "Unexposed data feed" data
 All endpoints return JSON formatted data using keys and values consistent with IbPy and IB Java APIs (case sensitive).
 
 ### Endpoint Groups
-The documentation for each of these layers contains these sections, after which ibrest will create endpoints groups when applicable:
+The documentation for each of these layers contains these sections, after which IBREST will create endpoints groups when applicable:
 
 IB Documentation | REST endpoint
 ---------------- | -------------
