@@ -26,6 +26,7 @@ Use [IbPyOptional](https://code.google.com/p/ibpy/wiki/IbPyOptional) (`ib.opt` m
 
 ## REST API
 As IBREST is built with IbPy, and IbPy is based on the IB Java API, then IBREST will aim to use maximally similar language as found in those APIs' documentation.  The Java API is broken into two main layers:
+
 1. [EClientSocket](https://www.interactivebrokers.com/en/software/api/apiguide/java/java_eclientsocket_methods.htm) - the connection to TWS for sending messages to IB. 
 2. [EWrapper](https://www.interactivebrokers.com/en/software/api/apiguide/java/java_ewrapper_methods.htm) - the message processing logic for messages returned by IB.  Some messages are streamed in at intervals (ie subscriptions) and will not be exposed as a REST URI.  Such are maked `Unexposed data feed` below. 
 
