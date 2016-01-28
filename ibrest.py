@@ -36,7 +36,8 @@ _orderId = 0
 # Responses.  We also have some (dangerously) global dicts to use for our responses as updated by Message handlers
 _market_resp = []
 _portfolio_positions_resp = dict()
-_order_resp = dict(openOrderEnd=False, openOrder=[], openStatus=[])
+_error_resp = dict()
+_order_resp = dict(openOrderEnd=False, openOrder=[], orderStatus=[])
 
 # Logging shortcut
 log = app.logger
@@ -88,7 +89,7 @@ def order_handler(msg):
     """ Update our global Order data response dict
     """
     global _order_resp
-    if msg.typeName in ['openStatus', 'openOrder']:
+    if msg.typeName in ['orderStatus', 'openOrder']:
         d = dict()
         for i in msg.items():
             if isinstance(i[1], (Contract, Order, OrderState)):
@@ -102,7 +103,11 @@ def order_handler(msg):
 
 
 def error_handler(msg):
-    log.error(msg)
+    """ Update our global to keep the latest error available for API returns
+    """
+    global _error_resp
+    _error_resp = {i[0]: i[1] for i in msg.items()}
+    log.error('ERROR: {}'.format(msg))
 
 
 def generic_handler(msg):
@@ -142,6 +147,7 @@ def get_client(client_id=None):
         return
     '''
     # TODO check if client is connected.  use .disconnect() if useful then reconnect.
+    time.sleep(1)  # wait a bit to ensure we got messages back confirming we're connected and _order_id is updated.
     return client
 
 
@@ -223,24 +229,76 @@ def get_open_orders():
     """
     global _order_resp
     client = get_client()
+    # Reset our order resp to prepare for new data
+    _order_resp = dict(openOrderEnd=False, openOrder=[], orderStatus=[])
     client.reqAllOpenOrders()
     while _order_resp['openOrderEnd'] is False and client.isConnected() is True:
         log.info("Waiting for responses on {}...".format(client))
         time.sleep(0.5)
     close_client(client)
     resp = _order_resp.copy()
-    # Reset our order resp for next time
-    _order_resp = dict(openOrderEnd=False, openOrder=[], openStatus=[])
-    print resp
     return resp
 
 
-def order_trail_stop(symbol, qty, stopPrice, trailingPercent):
+def cancel_order(orderId):
+    """ Uses cancelOrder to cancel an order.  The only response is what comes back right away (no EWrapper messages)
+    """
+    global _order_resp
+    client = get_client()
+    log.info('Cancelling order {}'.format(orderId))
+    # Reset our order resp to prepare for new data
+    _order_resp = dict(openOrderEnd=False, openOrder=[], orderStatus=[])
+    client.cancelOrder(int(orderId))
+    time.sleep(1)
+    close_client(client)
+    resp = _order_resp.copy()
+    # Cancelling an order also produces an error, we'll capture that here too
+    global _error_resp
+    resp['error'] = _error_resp
+    return resp
+
+
+def place_order(args):
+    """ Auto-detects which args should be assigned to a new Contract or Order, then use to place order.
+    Makes use of globals to set initial values, but allows args to override
+    """
+    # Populate contract with appropriate
+    contract = Contract()
+    for attr in dir(contract):
+        if attr[:2] == 'm_' and attr[2:] in args:
+            setattr(contract, attr, args[attr[2:]])
+
+    # Populate order with appropriate
+    order = Order()
+    for attr in dir(order):
+        if attr[:2] == 'm_' and attr[2:] in args:
+            setattr(order, attr, args[attr[2:]])
+
+    client = get_client()
+    log.debug('Placing order')
+    global _orderId
+    global _order_resp
+    global _error_resp
+    _error_resp = None
+    # Reset our order resp to prepare for new data
+    _order_resp = dict(openOrderEnd=False, openOrder=[], orderStatus=[])
+    client.placeOrder(_orderId, contract, order)
+    while len(_order_resp['orderStatus']) == 0 and client.isConnected() is True:
+        log.info("Waiting for responses on {}...".format(client))
+        if _error_resp is not None:
+            close_client(client)
+            return _error_resp
+        time.sleep(0.5)
+    resp = _order_resp.copy()
+    close_client(client)
+    return resp
+
+
+def order_trail_stop(symbol, qty, trailingPercent):
     """ Places a trailing stop loss order.  `qty` used to determine BUY/SELL, and both *Quantity inputs.
     """
     # Open a connection
     client = get_client()
-    time.sleep(0.5)
 
     # Create a contract object
     contract = create_contract(symbol)
@@ -252,18 +310,21 @@ def order_trail_stop(symbol, qty, stopPrice, trailingPercent):
     order.m_minQty = abs(qty)
     order.m_totalQuantity = abs(qty)
     order.m_orderType = 'TRAIL'
-    #order.m_lmtPrice = stopPrice
-    #order.m_trailStopPrice = stopPrice
     order.m_trailingPercent = trailingPercent
+    order.m_tif = 'GTC'  # Keep Order open "forever" (180 days)
 
     log.debug('Placing order')
     global _orderId
-    # Increment our orderId for next order
-    _orderId += 1
+    global _order_resp
+    # Reset our order resp to prepare for new data
+    _order_resp = dict(openOrderEnd=False, openOrder=[], orderStatus=[])
     client.placeOrder(_orderId, contract, order)
-    time.sleep(0.5)
-    print 'disconnected', close_client(client)
-
+    while len(_order_resp['orderStatus']) == 0 and client.isConnected() is True:
+        log.info("Waiting for responses on {}...".format(client))
+        time.sleep(0.5)
+    resp = _order_resp.copy()
+    close_client(client)
+    return resp
 
 # ---------------------------------------------------------------------
 # PORTFOLIO FUNCTIONS
