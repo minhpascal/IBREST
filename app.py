@@ -1,5 +1,5 @@
 #!/usr/bin/python
-""" IBREST API Flask controller file.  This file establishes the routes used for the IBREST API.  More info at:
+""" IBREST API Flask app controller file.  This file establishes the routes used for the IBREST API.  More info at:
 https://github.com/hamx0r/IBREST
 
 Most of this API takes HTTP requests and translates them to EClientSocket Methods:
@@ -11,8 +11,8 @@ https://www.interactivebrokers.com/en/software/api/apiguide/java/java_ewrapper_m
 # Flask imports
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
-import ibrest
-
+# IBREST imports
+import sync
 
 __author__ = 'Jason Haury'
 
@@ -36,7 +36,7 @@ class Market(Resource):
         parser.add_argument('rate', type=int, help='Rate to charge for this resource')
         args = parser.parse_args()
         '''
-        return ibrest.get_market_data(symbol)
+        return sync.get_market_data(symbol)
 
 
 class Orders(Resource):
@@ -46,7 +46,7 @@ class Orders(Resource):
     def get(self):
         """ Retrieves details of open orders using reqAllOpenOrders()
         """
-        return ibrest.get_open_orders()
+        return sync.get_open_orders()
 
     def post(self):
         """ Places an order with placeOrder().  This requires enough args to create a Contract & and Order:
@@ -89,7 +89,7 @@ class Orders(Resource):
         for k, v in args.iteritems():
             all_args[k] = v
         print all_args
-        return ibrest.place_order(args)
+        return sync.place_order(args)
 
     def delete(self):
         """ Cancels order with cancelOrder()
@@ -98,7 +98,7 @@ class Orders(Resource):
         parser.add_argument('orderId', type=int, required=True,
                             help='Order ID to cancel')
         args = parser.parse_args()
-        return ibrest.cancel_order(args['orderId'])
+        return sync.cancel_order(args['orderId'])
 
 
 class PortfolioPositions(Resource):
@@ -109,7 +109,7 @@ class PortfolioPositions(Resource):
         """
         :return: JSON dict of dicts, with main keys being tickPrice, tickSize and optionComputation.
         """
-        return ibrest.get_portfolio()
+        return sync.get_portfolio()
 
 
 # ---------------------------------------------------------------------
