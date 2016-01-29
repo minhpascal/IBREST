@@ -69,7 +69,7 @@ def portfolio_positions_handler(msg):
         _portfolio_positions_resp['positions'].append(position.copy())
     elif msg.typeName == 'positionEnd':
         _portfolio_positions_resp['positionEnd'] = True
-    log.info('POSITION: {})'.format(msg))
+    log.debug('POSITION: {})'.format(msg))
 
 
 def order_handler(msg):
@@ -87,7 +87,7 @@ def order_handler(msg):
         _order_resp_by_order.get(d['orderId'], dict(openOrder=[], orderStatus=[]))[msg.typeName].append(d.copy())
     elif msg.typeName == 'openOrderEnd':
         _order_resp['openOrderEnd'] = True
-    log.info('ORDER: {})'.format(msg))
+    log.debug('ORDER: {})'.format(msg))
 
 
 def error_handler(msg):
@@ -103,7 +103,7 @@ def error_handler(msg):
 
 
 def generic_handler(msg):
-    log.info('MESSAGE: {}, {})'.format(msg, msg.keys))
+    log.debug('MESSAGE: {}, {})'.format(msg, msg.keys))
 
 
 # ---------------------------------------------------------------------
@@ -114,6 +114,8 @@ def get_client(client_id=None):
     """
     if client_id is None:
         # Get client ID from our pool list in memory
+        while len(_clientId_pool) == 0:
+            time.sleep(0.5)
         try:
             client_id = _clientId_pool.pop()
         except KeyError:
@@ -131,9 +133,10 @@ def get_client(client_id=None):
     # Add handlers for feeds
     client.register(market_handler, 'TickSize', 'TickPrice')
     # TODO remove generic handlers for logging
-    client.registerAll(generic_handler)
+    #client.registerAll(generic_handler)
+    #client.enableLogging()
     client.connect()
-    client.enableLogging()
+
     # Wait a bit to ensure we got messages back confirming we're connected and _order_id is updated.
     timeout = 10  # 2.5 secs
     while client.isConnected() is False and timeout > 0:
