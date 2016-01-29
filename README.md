@@ -10,10 +10,13 @@ This API should run on the same machine with TWS so that TWS can be set to only 
 
 ### Google App Engine
 This API layer between your algorithm code and the IbPy API code is intended for use on Google App Engine where an algoritm may be operating within the GAE system, with TWS running on a Compute Engine VM (ie [Brokertron](http://www.brokertron.com/)).  TWS does not support wildcard IP address (which would be a security hole anyways), and GAE uses many IPs when making outbound connections from one's App (making it neigh impossible to list all possible IPs in TWS' whitelist).  However, this project will aim to stay generalized enough so that it can be used outside of GAE.  
+
+For running flask as a Docker container, consider [this tutorial](http://containertutorials.com/docker-compose/flask-simple-app.html) or use this existing [docker-flask image](https://hub.docker.com/r/p0bailey/docker-flask/).
+
 TODO: Consider using following GAE features:
 1. [Logging messages to GAE logger](https://cloud.google.com/logging/docs/agent/installation)
 2. [Storing IB messages to DataStore](https://cloud.google.com/datastore/docs/getstarted/start_python/)
-3. [Using Task Queue to get requests from GAE](https://cloud.google.com/appengine/docs/java/taskqueue/rest/about_auth).  IB allows 6 `client_ids`, which will impose a limit of 9 "simultaneous" tasks at a time with IBREST, unless some kind of task queuing happens (ie [Celery](http://flask.pocoo.org/docs/0.10/patterns/celery/))
+3. [Using Task Queue to get requests from GAE](https://cloud.google.com/appengine/docs/java/taskqueue/rest/about_auth).  IB allows 8 `client_ids`, which will impose a limit of 8 "simultaneous" tasks at a time with IBREST, unless some kind of task queuing happens (ie [Celery](http://flask.pocoo.org/docs/0.10/patterns/celery/))
  
 ### Synchronous
 The [IB API](https://www.interactivebrokers.com/en/software/api/api.htm) is designed to be _a_synchronous, which adds labor to writing code to interface with it.  As IB message exchanges are pretty fast (a couple seconds at most), it's within time margins for use with HTTP requests (~60sec timeouts).  Thus, the exposed RESTful API opens a user-friendly synchronous interface with IB.
@@ -23,12 +26,13 @@ Use [IbPyOptional](https://code.google.com/p/ibpy/wiki/IbPyOptional) (`ib.opt` m
 
 ## REST API
 As IBREST is built with IbPy, and IbPy is based on the IB Java API, then IBREST will aim to use maximally similar language as found in those APIs' documentation.  The Java API is broken into two main layers:
+
 1. [EClientSocket](https://www.interactivebrokers.com/en/software/api/apiguide/java/java_eclientsocket_methods.htm) - the connection to TWS for sending messages to IB. 
 2. [EWrapper](https://www.interactivebrokers.com/en/software/api/apiguide/java/java_ewrapper_methods.htm) - the message processing logic for messages returned by IB.  Some messages are streamed in at intervals (ie subscriptions) and will not be exposed as a REST URI.  Such are maked `Unexposed data feed` below. 
 
 TODO: Consider creating an RSS feed endpoint for such "Unexposed data feed" data. 
 
-**NOTE:** As noted in [Synchronous], TWS only allows 8 connections (client ID's 0-7, where 0 has some special privileges).  These 6 client ID's are treated as a connection pool.   This means that if 7 orders are placed very quickly, 6 of them will begin execution right away, and 1 will have to wait until a connection is freed (max ~50 sec).  This can be a hazard if placing market orders or if expecting to place many orders per few seconds.  The intent is for only one web app to call this API, and thereby prevent pool exhaustion/TWS overload.  
+**NOTE:** As noted in [Synchronous], TWS only allows 8 connections (client ID's 0-7, where 0 has some special privileges).  These client ID's are treated as a connection pool.   This means that if 9 orders are placed very quickly, 8 of them will begin execution right away, and 1 will have to wait until a connection is freed (max ~50 sec).  This can be a hazard if placing market orders or if expecting to place many orders per few seconds.  The intent is for only one web app to call this API, and thereby prevent pool exhaustion/TWS overload.  
     
 All endpoints return JSON formatted data using keys and values consistent with IbPy and IB Java APIs (case sensitive).
 
@@ -55,7 +59,6 @@ Display Groups| NA: Unexposed data feed
  
 ### Endpoint Details
 The endpoints of each implemented group is documented below.  
-
  
 #### GET /market/{tickerId}
 A GET request {tickerId}'s market data will generate a `reqMktData()` EClient call, then wait for all appropriate `tick*()` EWrapper messages to return (price, size, optionComputation, etc).  At that point, an EClient `cancelMktData` message will be sent to the server and an HTTP response will be returned.
