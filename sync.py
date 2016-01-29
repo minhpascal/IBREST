@@ -5,6 +5,7 @@ from ib.opt import ibConnection
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
 from ib.ext.OrderState import OrderState
+from flask import current_app
 import time
 from app import app
 from feeds import market_handler
@@ -132,9 +133,10 @@ def get_client(client_id=None):
     client.register(error_handler, 'Error')
     # Add handlers for feeds
     client.register(market_handler, 'TickSize', 'TickPrice')
-    # TODO remove generic handlers for logging
-    #client.registerAll(generic_handler)
-    #client.enableLogging()
+    # Enable logging if we're in debug mode
+    if current_app.debug is True:
+        client.registerAll(generic_handler)
+        client.enableLogging()
     client.connect()
 
     # Wait a bit to ensure we got messages back confirming we're connected and _order_id is updated.
