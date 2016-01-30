@@ -1,10 +1,10 @@
 """ In case of IB EClientSocket requests which generate continuous feeds of data, this module will generate atom feeds.
 """
+from sync import *
 __author__ = 'Jason Haury'
 
 # Globals to use for feed responses
 _market_resp = {c: [] for c in xrange(8)}  # market feed
-_tickerId = 0
 
 
 # ---------------------------------------------------------------------

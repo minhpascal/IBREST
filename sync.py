@@ -10,6 +10,9 @@ import time
 from app import app
 from feeds import market_handler
 import os
+from datetime import datetime, timedelta
+import pytz
+from time import strftime
 
 __author__ = 'Jason Haury'
 
@@ -26,15 +29,20 @@ _ibgw_port = int(os.getenv('IBGW_PORT', '4001'))  # Use 7496 for TWS
 _managedAccounts = []
 _clientId_pool = {0, 1, 2, 3, 4, 5, 6, 7}
 _orderId = 0
+_tickerId = 0
 
 # Responses.  Global dicts to use for our responses as updated by Message handlers, keyed by clientId
 _portfolio_positions_resp = {c: dict() for c in xrange(8)}
+_account_summary_resp = {c: dict(accountSummaryEnd=False, accountSummary=[]) for c in xrange(8)}
+_account_update_resp = dict(accountDownloadEnd=False, updateAccountValue=dict(), updatePortfolio=[])
 # Track errors keyed in "id" which is the orderId or tickerId (or -1 for connection errors)
 _error_resp = dict()
 # When getting order info, we want it for all clients, and don't care so much if multiple requests try to populate this
 _order_resp = dict(openOrderEnd=False, openOrder=[], orderStatus=[])
 # When placing/deleting orders, we care about what orderId is used.  Key off orderId.
 _order_resp_by_order = dict()
+# Dict of history responses keyed off of reqId (tickerId)
+_history_resp = dict()
 
 # Logging shortcut
 log = app.logger
@@ -56,21 +64,52 @@ def connection_handler(msg):
         log.info('Updated managed accounts: {}'.format(_managedAccounts))
 
 
+def account_summary_handler(msg):
+    """ Update our global Account Summary data response dict
+    """
+
+    if msg.typeName == 'accountSummary':
+        account = msg_to_dict(msg)
+        _account_summary_resp[int(msg.reqId)]['accountSummary'].append(account.copy())
+    elif msg.typeName == 'accountSummaryEnd':
+        _account_summary_resp[int(msg.reqId)]['accountSummaryEnd'] = True
+    log.debug('SUMMARY: {})'.format(msg))
+
+
+def account_update_handler(msg):
+    """ Update our global Account Update data response dict
+    """
+    global _account_update_resp
+    if msg.typeName == 'updateAccountTime':
+        _account_update_resp[msg.typeName] = msg.updateAccountTime
+    elif msg.typeName == 'updateAccountValue':
+        account = msg_to_dict(msg)
+        _account_update_resp[msg.typeName][msg.key] = account
+    elif msg.typeName == 'updatePortfolio':
+        account = msg_to_dict(msg)
+        _account_update_resp[msg.typeName].append(account.copy())
+    elif msg.typeName == 'accountDownloadEnd':
+        _account_update_resp[msg.typeName] = True
+    log.debug('UPDATE: {})'.format(msg))
+
 def portfolio_positions_handler(msg):
     """ Update our global Portfolio Positoins data response dict
     """
-
     if msg.typeName == 'position':
-        position = dict()
-        for i in msg.items():
-            if isinstance(i[1], Contract):
-                position[i[0]] = i[1].__dict__
-            else:
-                position[i[0]] = i[1]
+        position = msg_to_dict(msg)
         _portfolio_positions_resp['positions'].append(position.copy())
     elif msg.typeName == 'positionEnd':
         _portfolio_positions_resp['positionEnd'] = True
     log.debug('POSITION: {})'.format(msg))
+
+
+def history_handler(msg):
+    """ Update our global Portfolio Positoins data response dict
+    """
+    global _history_resp
+    history = msg_to_dict(msg)
+    _history_resp[int(history['reqId'])] = history.copy()
+    log.debug('HISTORY: {})'.format(msg))
 
 
 def order_handler(msg):
@@ -78,12 +117,7 @@ def order_handler(msg):
     """
     global _order_resp, _order_resp_by_order
     if msg.typeName in ['orderStatus', 'openOrder']:
-        d = dict()
-        for i in msg.items():
-            if isinstance(i[1], (Contract, Order, OrderState)):
-                d[i[0]] = i[1].__dict__
-            else:
-                d[i[0]] = i[1]
+        d = msg_to_dict(msg)
         _order_resp[msg.typeName].append(d.copy())
         _order_resp_by_order.get(d['orderId'], dict(openOrder=[], orderStatus=[]))[msg.typeName].append(d.copy())
     elif msg.typeName == 'openOrderEnd':
@@ -128,8 +162,12 @@ def get_client(client_id=None):
 
     # Add synchronous response handlers
     client.register(connection_handler, 'ManagedAccounts', 'NextValidId')
+    client.register(history_handler, 'HistoricalData')
     client.register(order_handler, 'OpenOrder', 'OrderStatus', 'OpenOrderEnd')
     client.register(portfolio_positions_handler, 'Position', 'PositionEnd')
+    client.register(account_summary_handler, 'AccountSummary', 'AccountSummaryEnd')
+    client.register(account_update_handler, 'UpdateAccountTime', 'UpdateAccountValue', 'UpdatePortfolio',
+                    'AccountDownloadEnd')
     client.register(error_handler, 'Error')
     # Add handlers for feeds
     client.register(market_handler, 'TickSize', 'TickPrice')
@@ -157,6 +195,81 @@ def close_client(client):
     # Now close our actual client
     client.close()
     return client_id
+
+
+def msg_to_dict(msg):
+    """ Converts a message to a dict
+    """
+    d = dict()
+    for i in msg.items():
+        if isinstance(i[1], (Contract, Order, OrderState)):
+            d[i[0]] = i[1].__dict__
+        else:
+            d[i[0]] = i[1]
+    return d
+
+
+def make_contract(symbol):
+    contract = Contract()
+    contract.m_symbol = symbol
+    contract.m_secType = 'STK'
+    contract.m_exchange = 'SMART'
+    contract.m_primaryExch = 'SMART'
+    contract.m_currency = 'USD'
+    contract.m_localSymbol = symbol
+    return contract
+
+
+# ---------------------------------------------------------------------
+# HISTORY FUNCTIONS
+# ---------------------------------------------------------------------
+def get_history(args):
+    """ Args may be any of those in reqHistoricalData()
+    https://www.interactivebrokers.com/en/software/api/apiguide/java/reqhistoricaldata.htm
+    """
+    client = get_client()
+
+    # Populate contract with appropriate
+    contract = Contract()
+    for attr in dir(contract):
+        if attr[:2] == 'm_' and attr[2:] in args:
+            setattr(contract, attr, args[attr[2:]])
+    contract = make_contract('AAPL')
+    global _tickerId, _history_resp
+    _tickerId += 1
+    _history_resp[_tickerId] = dict()
+    endtime = (datetime.now() - timedelta(minutes=15)).strftime('%Y%m%d %H:%M:%S')
+    client.reqHistoricalData(
+            tickerId=_tickerId,
+            contract=contract,
+            endDateTime=endtime,
+            durationStr='2 D',
+            barSizeSetting='30 mins',
+            whatToShow='TRADES',
+            useRTH=0,
+            formatDate=1)
+
+    """
+    durationStr='60 S',
+    barSizeSetting='1 min',
+    whatToShow='TRADES',
+    useRTH=0,
+    formatDate=1)
+    """
+    while len(_history_resp[_tickerId]) == 0:
+        log.info("Waiting for responses on client {}...".format(client.clientId))
+        if _error_resp.get(_tickerId, None) is not None:
+            close_client(client)
+            return _error_resp[_tickerId]
+        elif client.isConnected() is False:
+            return {'errorMsg': 'Connection lost'}
+
+        time.sleep(0.25)
+    log.debug('histor: {}'.format(_history_resp))
+    resp = _history_resp[_tickerId].copy()
+    client.cancelHistoricalData(_tickerId)
+    close_client(client)
+    return resp
 
 
 # ---------------------------------------------------------------------
@@ -247,15 +360,48 @@ def place_order(args):
 # ---------------------------------------------------------------------
 # PORTFOLIO FUNCTIONS
 # ---------------------------------------------------------------------
-def get_portfolio():
-    log.info('Getting client')
+def get_portfolio_positions():
     client = get_client()
-    log.info('Got client, getting portfolio')
     global _portfolio_positions_resp
     _portfolio_positions_resp = dict(positionEnd=False, positions=[])
     client.reqPositions()
     while _portfolio_positions_resp['positionEnd'] is False and client.isConnected() is True:
         log.info("Waiting for responses on client {}...".format(client.clientId))
         time.sleep(0.25)
+    client.cancelPositions()
     close_client(client)
     return _portfolio_positions_resp
+
+
+def get_account_summary(tags):
+    """ Calls reqAccountSummary() then listens for accountSummary messages()
+    """
+    client = get_client()
+    client_id = client.clientId
+    global _account_summary_resp
+    _account_summary_resp[client_id] = dict(accountSummaryEnd=False, accountSummary=[])
+    client.reqAccountSummary(client_id, 'All', tags)
+    while _account_summary_resp[client_id]['accountSummaryEnd'] is False and client.isConnected() is True:
+        log.info("Waiting for responses on client {}...".format(client.clientId))
+        time.sleep(0.25)
+    #time.sleep(1)
+    client.cancelAccountSummary(client_id)
+    close_client(client)
+    return _account_summary_resp[client_id]
+
+
+def get_account_update(acctCode):
+    """ Calls reqAccountUpdates(subscribe=False) then listens for accountAccountTime/AccountValue/Portfolio messages
+    """
+    client = get_client()
+    client_id = client.clientId
+    global _account_update_resp
+    _account_update_resp = dict(accountDownloadEnd=False, updateAccountValue=dict(), updatePortfolio=[])
+    client.reqAccountUpdates(subscribe=False, acctCode=acctCode)
+    while _account_update_resp['accountDownloadEnd'] is False and client.isConnected() is True:
+        log.info("Waiting for responses on client {}...".format(client.clientId))
+        time.sleep(1)
+        log.debug('Current update {}'.format(_account_update_resp))
+    client.cancelAccountSummary(client_id)
+    close_client(client)
+    return _account_update_resp

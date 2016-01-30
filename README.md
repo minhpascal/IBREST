@@ -43,7 +43,7 @@ IB Documentation | REST endpoint
 ---------------- | -------------
 Connection and Server | NA: Handled by Flask configuration
 Market Data | /market
-Orders | /order
+Orders| /order
 Account and Portfolio | /portfolio
 Contract Details | NA: Part of orders responses (TODO: is it?)
 Executions | NA: Part of /order responses 

@@ -12,17 +12,29 @@ https://www.interactivebrokers.com/en/software/api/apiguide/java/java_ewrapper_m
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
 # IBREST imports
-import sync
+import sync, feeds
 
 __author__ = 'Jason Haury'
 
 app = Flask(__name__)
 api = Api(app)
-
+# Logging shortcut
+log = app.logger
 
 # ---------------------------------------------------------------------
 # RESOURCES
 # ---------------------------------------------------------------------
+class History(Resource):
+    """ Resource to handle requests for historical data (15min delayed)
+    """
+    def get(self):
+        """ Uses reqHistoricalData() to start a stream of historical data, then upon getting data in that streatm,
+        cancels the stream with cancelHistoricalData() before returning the history
+        """
+        return sync.get_history(request.args.copy())
+
+
+
 class Market(Resource):
     """ Resource to handle requests for market data
     """
@@ -36,11 +48,11 @@ class Market(Resource):
         parser.add_argument('rate', type=int, help='Rate to charge for this resource')
         args = parser.parse_args()
         '''
-        return sync.get_market_data(symbol)
+        return feeds.get_market_data(symbol)
 
 
-class Orders(Resource):
-    """ Resource to handle requests for Orders
+class Order(Resource):
+    """ Resource to handle requests for Order
     """
 
     def get(self):
@@ -109,15 +121,69 @@ class PortfolioPositions(Resource):
         """
         :return: JSON dict of dicts, with main keys being tickPrice, tickSize and optionComputation.
         """
-        return sync.get_portfolio()
+        return sync.get_portfolio_positions()
 
+
+class AccountSummary(Resource):
+    """ Resource to handle requests for account summary information
+    """
+    def get(self):
+        """
+        One may either provide a CSV string of `tags` desired, or else provide duplicate query string `tag` values
+        which the API will then put together in a CSV list as needed by IbPy
+        :return: JSON dict of dicts
+        """
+        choices = {"AccountType", "NetLiquidation", "TotalCashValue", "SettledCash", "AccruedCash", "BuyingPower",
+                   "EquityWithLoanValue", "PreviousDayEquityWithLoanValue", "GrossPositionValue", "RegTEquity",
+                   "RegTMargin", "SMA", "InitMarginReq", "MaintMarginReq", "AvailableFunds", "ExcessLiquidity",
+                   "Cushion", "FullInitMarginReq", "FullMaintMarginReq", "FullAvailableFunds", "FullExcessLiquidity",
+                   "LookAheadNextChange", "LookAheadInitMarginReq", "LookAheadMaintMarginReq",
+                   "LookAheadAvailableFunds", "LookAheadExcessLiquidity", "HighestSeverity", "DayTradesRemaining",
+                   "Leverage"}
+        parser = reqparse.RequestParser(bundle_errors=True)
+        parser.add_argument('tags', type=str, help='CSV list of tags from this set: {}'.format(choices), trim=True,
+                            default='')
+        parser.add_argument('tag', type=str, action='append', help='Account information you want to see: {error_msg}',
+                            trim=True, choices=choices, default=[])
+        args = parser.parse_args()
+        # Make a master list of tags from all possible arguments
+        tags = args['tag'] + args['tags'].split(',')
+        if len(tags) == 0:
+            # No tags were passed, so throw an error
+            return dict(message=dict(tags='Must provide 1 or more `tag` args, and/or a CSV `tags` arg'))
+        # Reduce and re-validate
+        tags = set(tags)
+        if not tags.issubset(choices):
+            return dict(message=dict(tags='All tags must be from this set: {}'.format(choices)))
+        # re-create CSV list
+        tags = ','.join(list(tags))
+        log.debug('TAGS: {}'.format(tags))
+        return sync.get_account_summary(tags)
+
+
+class AccountUpdate(Resource):
+    """ Resource to handle requests for account update information.
+    """
+    def get(self):
+        """
+        This endpoint does _not_ subscribe to account info (hence "Update" instead of "Updates" - use feed for that),
+        but only gets latest info for given acctCode.
+        :return: JSON dict of dicts
+        """
+        parser = reqparse.RequestParser()
+        parser.add_argument('acctCode', type=str, help='Account number/code', trim=True, required=True)
+        args = parser.parse_args()
+        return sync.get_account_update(args['acctCode'])
 
 # ---------------------------------------------------------------------
 # ROUTING
 # ---------------------------------------------------------------------
+api.add_resource(History, '/history')
 api.add_resource(Market, '/market/<string:symbol>')
-api.add_resource(Orders, '/order')
-api.add_resource(PortfolioPositions, '/portfolio/positions')
+api.add_resource(Order, '/order')
+api.add_resource(PortfolioPositions, '/account/positions')
+api.add_resource(AccountSummary, '/account/summary')
+api.add_resource(AccountUpdate, '/account/update')
 
 if __name__ == '__main__':
     import os
