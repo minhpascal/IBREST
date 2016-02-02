@@ -13,6 +13,7 @@ from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
 # IBREST imports
 import sync, feeds
+import parsers
 
 __author__ = 'Jason Haury'
 
@@ -20,6 +21,7 @@ app = Flask(__name__)
 api = Api(app)
 # Logging shortcut
 log = app.logger
+
 
 # ---------------------------------------------------------------------
 # RESOURCES
@@ -34,7 +36,6 @@ class History(Resource):
         return sync.get_history(request.args.copy())
 
 
-
 class Market(Resource):
     """ Resource to handle requests for market data
     """
@@ -42,12 +43,7 @@ class Market(Resource):
         """
         :return: JSON dict of dicts, with main keys being tickPrice, tickSize and optionComputation.
         """
-        # TODO add query string params for other Contract
-        '''
-        parser = reqparse.RequestParser()
-        parser.add_argument('rate', type=int, help='Rate to charge for this resource')
-        args = parser.parse_args()
-        '''
+        # TODO add query string params for Contract, and create feed accordingly
         return feeds.get_market_data(symbol)
 
 
@@ -64,44 +60,20 @@ class Order(Resource):
         """ Places an order with placeOrder().  This requires enough args to create a Contract & and Order:
         https://www.interactivebrokers.com/en/software/api/apiguide/java/java_socketclient_properties.htm
         """
-        parser = reqparse.RequestParser()
-        # Contract args https://www.interactivebrokers.com/en/software/api/apiguide/java/contract.htm
-        parser.add_argument('orderType', type=str, required=True,
-                            help='Type of Order to place', choices=['LMT', 'MTL', 'MKT PRT', 'QUOTE', 'STP', 'STP LMT',
-                                                                    'TRAIL LIT', 'TRAIL MIT', 'TRAIL', 'TRAIL LIMIT',
-                                                                    'MKT', 'MIT', 'MOC', 'MOO', 'PEG MKT', 'REL',
-                                                                    'BOX TOP', 'LOC', 'LOO', 'LIT', 'PEG MID', 'VWAP',
-                                                                    'GAT', 'GTD', 'GTC', 'IOC', 'OCA', 'VOL'])
-        parser.add_argument('secType', type=str, required=False, default='STK',
-                            help='Security Type', choices=['STK', 'OPT', 'FUT', 'IND', 'FOP', 'CASH', 'BAG', 'NEWS'])
-        parser.add_argument('exchange', type=str, required=False, default='SMART',
-                            help='Exchange (ie NASDAQ, SMART)')
-        parser.add_argument('currency', type=str, required=False, default='USD',
-                            help='Currency used for order (ie USD, GBP))')
-        parser.add_argument('symbol', type=str, required=True,
-                            help='Stock ticker symbol to order')
-
-        # Order args https://www.interactivebrokers.com/en/software/api/apiguide/java/order.htm
-        # Order types https://www.interactivebrokers.com/en/software/api/apiguide/tables/supported_order_types.htm
-        parser.add_argument('totalQuantity', type=int, required=True,
-                            help='Total Quantity to order')
-        parser.add_argument('action', type=str, required=True,
-                            help='Must be BUY, SELL or SSHORT')
-        parser.add_argument('tif', type=str, required=False,
-                            help='Time in force', choices=['DAT', 'GTC', 'IOC', 'GTD'])
-
-        '''
-        parser.add_argument('stopPrice', type=int, required=True,
-                            help='Stop price (will always sell if lower than this price)')
-        parser.add_argument('trailingPercent', type=float,
-                            help='Precentage loss to accept for Trailing Stop Loss order')
-        '''
+        parser = parsers.order_parser.copy()
+        for arg in parsers.contract_parser.args:
+            parser.add_argument(arg)
         args = parser.parse_args()
-        all_args = request.args.copy()
+        print "parsed args: {}".format(args)
+        all_args = {k: v for k, v in request.values.iteritems()}
+        print "starting all args: {}".format(all_args)
+        # update with validated data
         for k, v in args.iteritems():
             all_args[k] = v
-        print all_args
-        return sync.place_order(args)
+
+        #print "final args: {}".format(all_args)
+        log.debug('ARGS for POST to /order: {}'.format(all_args))
+        return sync.place_order(all_args)
 
     def delete(self):
         """ Cancels order with cancelOrder()
@@ -175,6 +147,14 @@ class AccountUpdate(Resource):
         args = parser.parse_args()
         return sync.get_account_update(args['acctCode'])
 
+
+class TEST(Resource):
+    """ Resource to handle requests for account update information.
+    """
+    def get(self):
+        sync.get_client()
+        return
+
 # ---------------------------------------------------------------------
 # ROUTING
 # ---------------------------------------------------------------------
@@ -184,6 +164,7 @@ api.add_resource(Order, '/order')
 api.add_resource(PortfolioPositions, '/account/positions')
 api.add_resource(AccountSummary, '/account/summary')
 api.add_resource(AccountUpdate, '/account/update')
+api.add_resource(TEST, '/test')
 
 if __name__ == '__main__':
     import os

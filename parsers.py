@@ -21,11 +21,6 @@ order_parser.add_argument('action', type=str, required=True,
 order_parser.add_argument('tif', type=str,
                     help='Time in force', choices=['DAT', 'GTC', 'IOC', 'GTD'])
 
-order_parser.add_argument('stopPrice', type=int,
-                    help='Stop price (will always sell if lower than this price)')
-order_parser.add_argument('trailingPercent', type=float,
-                    help='Precentage loss to accept for Trailing Stop Loss order')
-
 
 # ---------------------------------------------------------------------
 # CONTRACT PARSER
@@ -34,6 +29,7 @@ order_parser.add_argument('trailingPercent', type=float,
 # https://www.interactivebrokers.com/en/software/api/apiguide/java/contract.htm
 contract_parser = reqparse.RequestParser()
 # clientId is handled by sync code
+contract_parser.add_argument('symbol', type=str, required=True, help='Stock ticker symbol to order')
 contract_parser.add_argument('orderType', type=str, required=True, help='Type of Order to place',
                              choices=['LMT', 'MTL', 'MKT PRT', 'QUOTE', 'STP', 'STP LMT', 'TRAIL LIT', 'TRAIL MIT',
                                       'TRAIL', 'TRAIL LIMIT', 'MKT', 'MIT', 'MOC', 'MOO', 'PEG MKT', 'REL', 'BOX TOP',
@@ -43,4 +39,5 @@ contract_parser.add_argument('secType', type=str, required=False, default='STK',
 contract_parser.add_argument('exchange', type=str, required=False, default='SMART', help='Exchange (ie NASDAQ, SMART)')
 contract_parser.add_argument('currency', type=str, required=False, default='USD',
                              help='Currency used for order (ie USD, GBP))')
-contract_parser.add_argument('symbol', type=str, required=True, help='Stock ticker symbol to order')
+# not needed for updates:
+contract_parser.add_argument('symbol', type=str, required=False, help='Stock ticker symbol to order')
