@@ -148,13 +148,6 @@ class AccountUpdate(Resource):
         return sync.get_account_update(args['acctCode'])
 
 
-class TEST(Resource):
-    """ Resource to handle requests for account update information.
-    """
-    def get(self):
-        sync.get_client()
-        return
-
 # ---------------------------------------------------------------------
 # ROUTING
 # ---------------------------------------------------------------------
@@ -164,11 +157,17 @@ api.add_resource(Order, '/order')
 api.add_resource(PortfolioPositions, '/account/positions')
 api.add_resource(AccountSummary, '/account/summary')
 api.add_resource(AccountUpdate, '/account/update')
-api.add_resource(TEST, '/test')
 
 if __name__ == '__main__':
     import os
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
-    app.run(debug=False, host=host, port=port)
+    # Enable HTTPS
+    from OpenSSL import SSL
+    context = SSL.Context(SSL.SSLv23_METHOD)
+    # TODO make certs and add to GAE.  Perhaps restrict communication to only those hosts?
+    context.use_privatekey_file('yourserver.key')
+    context.use_certificate_file('yourserver.crt')
+    # TODO explore POODLE vulnerability and ssl vs OpenSSL modules per http://flask.pocoo.org/snippets/111/
+    app.run(debug=False, host=host, port=port, ssl_context=context)
 
