@@ -1,6 +1,6 @@
 """ In case of IB EClientSocket requests which generate continuous feeds of data, this module will generate atom feeds.
 """
-import globals
+import globals as g
 import time
 from app import log
 from connection import get_client, close_client
@@ -27,16 +27,16 @@ def get_market_data(symbol):
     #contractTuple = ('EUR', 'CASH', 'IDEALPRO', 'USD', '', 0.0, '')
     #contract = makeStkContract(contractTuple)
     # The tickerId must be unique, so just increment our global to guarantee uniqueness
-    globals._tickerId += 1
+    g.tickerId += 1
 
-    globals._market_resp = []
+    g.market_resp = []
     log.info('Requesting market data')
-    #client.reqMktData(_tickerId, contract, '100', True)
+    #client.reqMktData(tickerId, contract, '100', True)
     time.sleep(1)
     client.reqMktData(1, contract, '', False)
-    #client.reqMktData(_tickerId, contract, '', False)
-    while len(globals._market_resp) < 5 and client.isConnected() is True:
+    #client.reqMktData(tickerId, contract, '', False)
+    while len(g.market_resp) < 5 and client.isConnected() is True:
         log.info("Waiting for responses on {}...".format(client))
         time.sleep(1)
     print 'disconnected', close_client(client)
-    return globals._market_resp
+    return g.market_resp

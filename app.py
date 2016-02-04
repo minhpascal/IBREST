@@ -160,6 +160,7 @@ api.add_resource(AccountUpdate, '/account/update')
 
 if __name__ == '__main__':
     import os
+    import connection
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
     # Enable HTTPS
@@ -169,5 +170,10 @@ if __name__ == '__main__':
     context.use_privatekey_file('yourserver.key')
     context.use_certificate_file('yourserver.crt')
     # TODO explore POODLE vulnerability and ssl vs OpenSSL modules per http://flask.pocoo.org/snippets/111/
+
+    # Connect to all clients
+    for c in xrange(8):
+        client = connection.get_client(c)
+        connection.close_client(client)
     app.run(debug=False, host=host, port=port, ssl_context=context)
 

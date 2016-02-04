@@ -1,6 +1,6 @@
 """ Needs documentation
 """
-import globals
+import globals as g
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
 from ib.ext.OrderState import OrderState
@@ -31,13 +31,13 @@ def connection_handler(msg):
     """ Handles messages from when we connect to TWS
     """
     if msg.typeName == 'nextValidId':
-        globals._orderId = max(int(msg.orderId), globals._orderId)
-        log.debug('Connection lock released.  OrderId set to {}'.format(globals._orderId))
-        globals._getting_order_id = False  # Unlock place_order() to now be called again.
-        log.info('Updated orderID: {}'.format(globals._orderId))
+        g.orderId = max(int(msg.orderId), g.orderId)
+        log.debug('Connection lock released.  OrderId set to {}'.format(g.orderId))
+        g.getting_order_id = False  # Unlock place_order() to now be called again.
+        log.info('Updated orderID: {}'.format(g.orderId))
     elif msg.typeName == 'managedAccounts':
-        globals._managedAccounts = msg.accountsList.split(',')
-        log.info('Updated managed accounts: {}'.format(globals._managedAccounts))
+        g.managedAccounts = msg.accountsList.split(',')
+        log.info('Updated managed accounts: {}'.format(g.managedAccounts))
 
 
 def account_summary_handler(msg):
@@ -45,9 +45,9 @@ def account_summary_handler(msg):
     """
     if msg.typeName == 'accountSummary':
         # account = msg_to_dict(msg)
-        globals._account_summary_resp[int(msg.reqId)][msg.tag] = msg.value
+        g.account_summary_resp[int(msg.reqId)][msg.tag] = msg.value
     elif msg.typeName == 'accountSummaryEnd':
-        globals._account_summary_resp[int(msg.reqId)]['accountSummaryEnd'] = True
+        g.account_summary_resp[int(msg.reqId)]['accountSummaryEnd'] = True
     log.debug('SUMMARY: {})'.format(msg))
 
 
@@ -55,15 +55,15 @@ def account_update_handler(msg):
     """ Update our global Account Update data response dict
     """
     if msg.typeName == 'updateAccountTime':
-        globals._account_update_resp[msg.typeName] = msg.updateAccountTime
+        g.account_update_resp[msg.typeName] = msg.updateAccountTime
     elif msg.typeName == 'updateAccountValue':
         account = msg_to_dict(msg)
-        globals._account_update_resp[msg.typeName][msg.key] = account
+        g.account_update_resp[msg.typeName][msg.key] = account
     elif msg.typeName == 'updatePortfolio':
         account = msg_to_dict(msg)
-        globals._account_update_resp[msg.typeName].append(account.copy())
+        g.account_update_resp[msg.typeName].append(account.copy())
     elif msg.typeName == 'accountDownloadEnd':
-        globals._account_update_resp[msg.typeName] = True
+        g.account_update_resp[msg.typeName] = True
     log.debug('UPDATE: {})'.format(msg))
 
 
@@ -72,9 +72,9 @@ def portfolio_positions_handler(msg):
     """
     if msg.typeName == 'position':
         position = msg_to_dict(msg)
-        globals._portfolio_positions_resp['positions'].append(position.copy())
+        g.portfolio_positions_resp['positions'].append(position.copy())
     elif msg.typeName == 'positionEnd':
-        globals._portfolio_positions_resp['positionEnd'] = True
+        g.portfolio_positions_resp['positionEnd'] = True
     log.debug('POSITION: {})'.format(msg))
 
 
@@ -82,7 +82,7 @@ def history_handler(msg):
     """ Update our global Portfolio Positoins data response dict
     """
     history = msg_to_dict(msg)
-    globals._history_resp[int(history['reqId'])] = history.copy()
+    g.history_resp[int(history['reqId'])] = history.copy()
     log.debug('HISTORY: {})'.format(msg))
 
 
@@ -91,10 +91,10 @@ def order_handler(msg):
     """
     if msg.typeName in ['orderStatus', 'openOrder']:
         d = msg_to_dict(msg)
-        globals._order_resp[msg.typeName].append(d.copy())
-        globals._order_resp_by_order.get(d['orderId'], dict(openOrder=dict(), orderStatus=dict()))[msg.typeName] = d.copy()
+        g.order_resp[msg.typeName].append(d.copy())
+        g.order_resp_by_order.get(d['orderId'], dict(openOrder=dict(), orderStatus=dict()))[msg.typeName] = d.copy()
     elif msg.typeName == 'openOrderEnd':
-        globals._order_resp['openOrderEnd'] = True
+        g.order_resp['openOrderEnd'] = True
     log.debug('ORDER: {})'.format(msg))
 
 
@@ -105,7 +105,7 @@ def error_handler(msg):
 
     IbPy provides and id of -1 for connection error messages
     """
-    globals._error_resp[int(msg.id)] = {i[0]: i[1] for i in msg.items()}
+    g.error_resp[int(msg.id)] = {i[0]: i[1] for i in msg.items()}
     log.error('ERROR: {}'.format(msg))
 
 
@@ -122,4 +122,4 @@ def market_handler(msg):
     resp = dict()
     for i in msg.items():
         resp[i[0]] = i[1]
-    globals._market_resp.append(resp.copy())
+    g.market_resp.append(resp.copy())
