@@ -170,5 +170,5 @@ if __name__ == '__main__':
     import os
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
-    app.run(debug=True, host=host, port=port)
+    app.run(debug=False, host=host, port=port)
 

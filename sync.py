@@ -27,7 +27,7 @@ _timeout = 20  # Max loops
 # Mutables
 _managedAccounts = []
 _clientId_pool = {0, 1, 2, 3, 4, 5, 6, 7}
-_connection_in_progress = False
+_getting_order_id = False
 _orderId = 0
 _tickerId = 0
 
@@ -55,10 +55,10 @@ def connection_handler(msg):
     """ Handles messages from when we connect to TWS
     """
     if msg.typeName == 'nextValidId':
-        global _orderId, _connection_in_progress
+        global _orderId, _getting_order_id
         _orderId = max(int(msg.orderId), _orderId)
         log.debug('Connection lock released.  OrderId set to {}'.format(_orderId))
-        _connection_in_progress = False  # Unlock get_client() to now be called again.
+        _getting_order_id = False  # Unlock place_order() to now be called again.
         log.info('Updated orderID: {}'.format(_orderId))
     elif msg.typeName == 'managedAccounts':
         global _managedAccounts
@@ -117,14 +117,11 @@ def history_handler(msg):
 def order_handler(msg):
     """ Update our global Order data response dict
     """
-    global _order_resp, _order_resp_by_order, _orderId
+    global _order_resp, _order_resp_by_order
     if msg.typeName in ['orderStatus', 'openOrder']:
         d = msg_to_dict(msg)
         _order_resp[msg.typeName].append(d.copy())
         _order_resp_by_order.get(d['orderId'], dict(openOrder=dict(), orderStatus=dict()))[msg.typeName] = d.copy()
-        # Different clientIds get tied to different orderIds, but we should always track the max
-        _orderId = max(_orderId, msg.orderId+1)
-        log.info('Updated orderID: {}'.format(_orderId))
     elif msg.typeName == 'openOrderEnd':
         _order_resp['openOrderEnd'] = True
     log.debug('ORDER: {})'.format(msg))
@@ -152,12 +149,14 @@ def generic_handler(msg):
 def get_client(client_id=None):
     """ Creates a client connection to be used with orders
     """
-    global _connection_in_progress
-
+    # TODO keep clients open and use this function to re-connect if needed.  Close_client() will simply return clients to pool
     if client_id is None:
         # Get client ID from our pool list in memory
+        global _clientId_pool
+        log.debug('Current clients available: {}'.format(_clientId_pool))
         timeout = _timeout
         while len(_clientId_pool) == 0 and timeout > 0:
+            log.debug('Waiting for clientId to become available...({})'.format(timeout))
             time.sleep(0.5)
             timeout -= 1
         try:
@@ -166,16 +165,7 @@ def get_client(client_id=None):
             client_id = None
     if client_id is None:
         return
-
-    # Ensure some other call to this function is not working at the same time.  Due to Order messages which may flood
-    # when connecting, we need a way to ensure only one connecting is in the process of being made at a time.
-    timeout = _timeout
-    while _connection_in_progress is True and timeout > 0:
-        time.sleep(0.5)
-        timeout -= 1
     log.info('Attempting connection with client_id {}'.format(client_id))
-    # TODO: Instead of using a lock, shift onus to order() functions to use reqIDs()
-    _connection_in_progress = True  # NextValidId message will clear this for us.
     client = ibConnection(_ibgw_host, _ibgw_port, client_id)
 
     # Add synchronous response handlers
@@ -249,6 +239,9 @@ def get_history(args):
     https://www.interactivebrokers.com/en/software/api/apiguide/java/reqhistoricaldata.htm
     """
     client = get_client()
+    if client is None or client.isConnected() is False:
+        global _error_resp
+        return _error_resp[-1]
 
     # Populate contract with appropriate
     contract = Contract()
@@ -326,6 +319,9 @@ def cancel_order(orderId):
     _error_resp[orderId] = None  # Reset our error for later
 
     client = get_client()
+    if client is None or client.isConnected() is False:
+        return _error_resp[-1]
+
     log.info('Cancelling order {}'.format(orderId))
     # Reset our order resp to prepare for new data
     _order_resp_by_order[orderId] = dict(openOrder=dict(), orderStatus=dict())
@@ -335,13 +331,13 @@ def cancel_order(orderId):
         log.info("Waiting for responses on client {}...".format(client.clientId))
         if _error_resp[orderId] is not None:
             close_client(client)
-            return _error_resp[_orderId]
+            return _error_resp[orderId]
         time.sleep(0.25)
         timeout -= 1
     close_client(client)
     resp = _order_resp.copy()
     # Cancelling an order also produces an error, we'll capture that here too
-    resp['error'] = _error_resp[_orderId]
+    resp['error'] = _error_resp[orderId]
     return resp
 
 
@@ -350,6 +346,9 @@ def place_order(args):
     Makes use of globals to set initial values, but allows args to override (ie clientId)
     """
     client = get_client()
+    if client is None or client.isConnected() is False:
+        global _error_resp
+        return _error_resp[-1]
 
     # Populate contract with appropriate
     contract = Contract()
@@ -364,9 +363,21 @@ def place_order(args):
         if attr[:2] == 'm_' and attr[2:] in args:
             setattr(order, attr, args[attr[2:]])
     log.debug('Contract: {}, Order: {}'.format(contract.__dict__, order.__dict__))
-    # correct next orderId when we go to place our order.
-    global _orderId
-    orderId = args.get('orderId', None) or _orderId
+    # Get our next valid order ID
+    if args.get('orderId', None) is None:
+        global _orderId, _getting_order_id
+        _getting_order_id = True
+        client.reqIds(1)
+        timeout = _timeout
+        while _getting_order_id is True and timeout > 0:
+            log.debug('Waiting for new orderId')
+            time.sleep(0.25)
+            timeout -= 1
+
+        orderId = _orderId
+    else:
+        orderId = args.get('orderId')
+
     global _order_resp_by_order
     global _error_resp
     _error_resp[orderId] = None
@@ -386,7 +397,6 @@ def place_order(args):
         time.sleep(0.25)
         timeout -= 1
 
-
     close_client(client)
     return {'status': 'OK'}
 
@@ -396,6 +406,9 @@ def place_order(args):
 # ---------------------------------------------------------------------
 def get_portfolio_positions():
     client = get_client()
+    if client is None or client.isConnected() is False:
+        global _error_resp
+        return _error_resp[-1]
     global _portfolio_positions_resp
     _portfolio_positions_resp = dict(positionEnd=False, positions=[])
     client.reqPositions()
@@ -413,6 +426,9 @@ def get_account_summary(tags):
     """ Calls reqAccountSummary() then listens for accountSummary messages()
     """
     client = get_client()
+    if client is None or client.isConnected() is False:
+        global _error_resp
+        return _error_resp[-1]
     client_id = client.clientId
     global _account_summary_resp
     _account_summary_resp[client_id] = dict(accountSummaryEnd=False)
@@ -432,6 +448,9 @@ def get_account_update(acctCode):
     """ Calls reqAccountUpdates(subscribe=False) then listens for accountAccountTime/AccountValue/Portfolio messages
     """
     client = get_client()
+    if client is None or client.isConnected() is False:
+        global _error_resp
+        return _error_resp[-1]
     client_id = client.clientId
     global _account_update_resp
     _account_update_resp = dict(accountDownloadEnd=False, updateAccountValue=dict(), updatePortfolio=[])
