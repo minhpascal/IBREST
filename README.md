@@ -39,6 +39,9 @@ While Python objects are named `with_under_scores`, IbPy and its corresponding J
 
 All endpoints return JSON formatted data using keys and values consistent with IbPy and IB Java APIs (case sensitive).
 
+For security, HTTPS is used by default.  To create your own cert and key, try:
+`openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ibrest.key -out ibrest.crt`
+
 ### Endpoint Groups
 The documentation for each of these layers contains these sections, after which IBREST will create endpoints groups when applicable.  An endpoint may provide either a synchronous reponse or an atom feed.
 
