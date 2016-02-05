@@ -32,6 +32,12 @@ var/
 # PyCharm
 .idea
 
+# SSL HTTPS certs
+ibrest.crt
+ibrest.key
+ibrest.key.pub
+ibrest.csr
+
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
