@@ -1,7 +1,7 @@
 """ Needs documentation
 """
 import time
-#from app import log
+# from app import log
 import logging
 import globals as g
 import utils
@@ -12,6 +12,7 @@ from flask import current_app
 __author__ = 'Jason Haury'
 log = logging.getLogger(__name__)
 utils.setup_logger(log)
+
 
 def get_client(client_id=None):
     """ Creates a client connection to be used with orders
@@ -32,7 +33,6 @@ def get_client(client_id=None):
         # A client ID was specified, so wait for it to become available if it's not already
         # First, make sure our client_id is valid
         if client_id not in range(8):
-            # TODO create exception types and better error JSON responses
             return
         if client_id in g.clientId_pool:
             g.clientId_pool.pop(g.clientId_pool.index(client_id))
@@ -46,7 +46,6 @@ def get_client(client_id=None):
     # Enable logging if we're in debug mode
     if current_app.debug is True:
         client.enableLogging()
-
 
     # Reconnect if needed
     if not client.isConnected():

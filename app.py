@@ -189,14 +189,11 @@ if __name__ == '__main__':
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
     # Enable HTTPS
-    '''
-    from OpenSSL import SSL
-    context = SSL.Context(SSL.SSLv23_METHOD)
-    # TODO make certs and add to GAE.  Perhaps restrict communication to only those hosts?
-    context.use_privatekey_file('yourserver.key')
-    context.use_certificate_file('yourserver.crt')
-    # TODO explore POODLE vulnerability and ssl vs OpenSSL modules per http://flask.pocoo.org/snippets/111/
-    '''
+    import ssl
+    # TODO upgrade OpenSSL to allow for newer PROTOCOL_TLSv1_2
+    context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
+    context.load_cert_chain('mycert.crt', 'mycert.key')
+
     # Connect to all clients
     for c in xrange(8):
         client = g.client_pool[c]
@@ -205,6 +202,5 @@ if __name__ == '__main__':
         g.client_pool[c] = client
     log.debug('Client pool: {}'.format(g.client_pool))
 
-    # TODO set up SSL/HTTPS
-    # app.run(debug=False, host=host, port=port, ssl_context=context)
-    app.run(debug=False, host=host, port=port)
+    app.run(debug=False, host=host, port=port, ssl_context=context)
+    #app.run(debug=False, host=host, port=port)
