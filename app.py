@@ -24,7 +24,7 @@ __author__ = 'Jason Haury'
 app = Flask(__name__)
 api = Api(app)
 # Logging shortcut
-#log = app.logger
+# log = app.logger
 log = logging.getLogger('werkzeug')
 utils.setup_logger(log)
 
@@ -35,6 +35,7 @@ utils.setup_logger(log)
 class History(Resource):
     """ Resource to handle requests for historical data (15min delayed)
     """
+
     def get(self):
         """ Uses reqHistoricalData() to start a stream of historical data, then upon getting data in that streatm,
         cancels the stream with cancelHistoricalData() before returning the history
@@ -45,6 +46,7 @@ class History(Resource):
 class Market(Resource):
     """ Resource to handle requests for market data
     """
+
     def get(self, symbol):
         """
         :return: JSON dict of dicts, with main keys being tickPrice, tickSize and optionComputation.
@@ -77,7 +79,7 @@ class Order(Resource):
         for k, v in args.iteritems():
             all_args[k] = v
 
-        #print "final args: {}".format(all_args)
+        # print "final args: {}".format(all_args)
         log.debug('ARGS for POST to /order: {}'.format(all_args))
         return sync.place_order(all_args)
 
@@ -105,6 +107,7 @@ class PortfolioPositions(Resource):
 class AccountSummary(Resource):
     """ Resource to handle requests for account summary information
     """
+
     def get(self):
         """
         One may either provide a CSV string of `tags` desired, or else provide duplicate query string `tag` values
@@ -142,6 +145,7 @@ class AccountSummary(Resource):
 class AccountUpdate(Resource):
     """ Resource to handle requests for account update information.
     """
+
     def get(self):
         """
         This endpoint does _not_ subscribe to account info (hence "Update" instead of "Updates" - use feed for that),
@@ -153,9 +157,11 @@ class AccountUpdate(Resource):
         args = parser.parse_args()
         return sync.get_account_update(args['acctCode'])
 
+
 class ClientStates(Resource):
     """ Explore what the connection states are for each client
     """
+
     def get(self):
         resp = dict(connected=dict(), available=dict())
         log.debug('Client pool: {}'.format(g.client_pool))
@@ -163,6 +169,7 @@ class ClientStates(Resource):
             resp['connected'][id] = client.isConnected() if client is not None else None
         resp['available'] = g.clientId_pool
         return resp
+
 
 # ---------------------------------------------------------------------
 # ROUTING
@@ -178,6 +185,7 @@ api.add_resource(ClientStates, '/clients')
 if __name__ == '__main__':
     import os
     import connection
+
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
     # Enable HTTPS
@@ -192,11 +200,11 @@ if __name__ == '__main__':
     # Connect to all clients
     for c in xrange(8):
         client = g.client_pool[c]
+        connection.setup_client(client)
         client.connect()
         g.client_pool[c] = client
     log.debug('Client pool: {}'.format(g.client_pool))
 
     # TODO set up SSL/HTTPS
-    #app.run(debug=False, host=host, port=port, ssl_context=context)
+    # app.run(debug=False, host=host, port=port, ssl_context=context)
     app.run(debug=False, host=host, port=port)
-

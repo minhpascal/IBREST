@@ -43,6 +43,10 @@ def get_client(client_id=None):
     log.info('Attempting connection with client_id {}'.format(client_id))
     client = g.client_pool[client_id]
 
+    # Enable logging if we're in debug mode
+    if current_app.debug is True:
+        client.enableLogging()
+
 
     # Reconnect if needed
     if not client.isConnected():
@@ -62,23 +66,19 @@ def get_client(client_id=None):
     """
 
 
-def setup_clients(client):
-    # Attach handlers to the clients
-    for id, client in g.client_pool.iteritems():
-     # Add synchronous response handlers
-        client.register(connection_handler, 'ManagedAccounts', 'NextValidId')
-        client.register(history_handler, 'HistoricalData')
-        client.register(order_handler, 'OpenOrder', 'OrderStatus', 'OpenOrderEnd')
-        client.register(portfolio_positions_handler, 'Position', 'PositionEnd')
-        client.register(account_summary_handler, 'AccountSummary', 'AccountSummaryEnd')
-        client.register(account_update_handler, 'UpdateAccountTime', 'UpdateAccountValue', 'UpdatePortfolio',
-                        'AccountDownloadEnd')
-        client.register(error_handler, 'Error')
-        # Add handlers for feeds
-        client.register(market_handler, 'TickSize', 'TickPrice')
-        # Enable logging if we're in debug mode
-        if current_app.debug is True:
-            client.enableLogging()
+def setup_client(client):
+    """ Attach handlers to the clients
+    """
+    client.register(connection_handler, 'ManagedAccounts', 'NextValidId')
+    client.register(history_handler, 'HistoricalData')
+    client.register(order_handler, 'OpenOrder', 'OrderStatus', 'OpenOrderEnd')
+    client.register(portfolio_positions_handler, 'Position', 'PositionEnd')
+    client.register(account_summary_handler, 'AccountSummary', 'AccountSummaryEnd')
+    client.register(account_update_handler, 'UpdateAccountTime', 'UpdateAccountValue', 'UpdatePortfolio',
+                    'AccountDownloadEnd')
+    client.register(error_handler, 'Error')
+    # Add handlers for feeds
+    client.register(market_handler, 'TickSize', 'TickPrice')
 
 
 def close_client(client):

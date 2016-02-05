@@ -31,7 +31,9 @@ portfolio_positions_resp = {c: dict() for c in xrange(8)}
 account_summary_resp = {c: dict(accountSummaryEnd=False) for c in xrange(8)}
 account_update_resp = dict(accountDownloadEnd=False, updateAccountValue=dict(), updatePortfolio=[])
 # Track errors keyed in "id" which is the orderId or tickerId (or -1 for connection errors)
-error_resp = {-1: "Unknown Error"}
+error_resp = {-1: {"errorCode": 502, "errorMsg": "Couldn't connect to TWS.  Confirm that \"Enable ActiveX and Socket "
+                                                 "Clients\" is enabled on the TWS \"Configure->API\" menu.", "id": -1},
+              -2: {"errorCode": None, "errorMsg": "Client ID not availabe in time.  Try request later", "id": -2}}
 # When getting order info, we want it for all clients, and don't care so much if multiple requests try to populate this
 order_resp = dict(openOrderEnd=False, openOrder=[], orderStatus=[])
 # When placing/deleting orders, we care about what orderId is used.  Key off orderId.

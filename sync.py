@@ -22,7 +22,9 @@ def get_history(args):
     https://www.interactivebrokers.com/en/software/api/apiguide/java/reqhistoricaldata.htm
     """
     client = get_client()
-    if client is None or client.isConnected() is False:
+    if client is None:
+        return g.error_resp[-2]
+    elif client.isConnected() is False:
         return g.error_resp[-1]
 
     # Populate contract with appropriate
@@ -75,7 +77,9 @@ def get_open_orders():
     """ Uses reqAllOpenOrders to get all open orders from 
     """
     client = get_client()
-    if client is None or client.isConnected() is False:
+    if client is None:
+        return g.error_resp[-2]
+    elif client.isConnected() is False:
         return g.error_resp[-1]
 
     # Reset our order resp to prepare for new data
@@ -96,7 +100,9 @@ def cancel_order(orderId):
     g.error_resp[orderId] = None  # Reset our error for later
 
     client = get_client()
-    if client is None or client.isConnected() is False:
+    if client is None:
+        return g.error_resp[-2]
+    elif client.isConnected() is False:
         return g.error_resp[-1]
 
     log.info('Cancelling order {}'.format(orderId))
@@ -123,7 +129,9 @@ def place_order(args):
     Makes use of globals to set initial values, but allows args to override (ie clientId)
     """
     client = get_client()
-    if client is None or client.isConnected() is False:
+    if client is None:
+        return g.error_resp[-2]
+    elif client.isConnected() is False:
         return g.error_resp[-1]
 
     # Populate contract with appropriate
@@ -178,7 +186,9 @@ def place_order(args):
 # ---------------------------------------------------------------------
 def get_portfolio_positions():
     client = get_client()
-    if client is None or client.isConnected() is False:
+    if client is None:
+        return g.error_resp[-2]
+    elif client.isConnected() is False:
         return g.error_resp[-1]
     g.portfolio_positions_resp = dict(positionEnd=False, positions=[])
     client.reqPositions()
@@ -196,7 +206,9 @@ def get_account_summary(tags):
     """ Calls reqAccountSummary() then listens for accountSummary messages()
     """
     client = get_client()
-    if client is None or client.isConnected() is False:
+    if client is None:
+        return g.error_resp[-2]
+    elif client.isConnected() is False:
         return g.error_resp[-1]
     client_id = client.clientId
     g.account_summary_resp[client_id] = dict(accountSummaryEnd=False)
@@ -217,7 +229,9 @@ def get_account_update(acctCode):
     """ Calls reqAccountUpdates(subscribe=False) then listens for accountAccountTime/AccountValue/Portfolio messages
     """
     client = get_client()
-    if client is None or client.isConnected() is False:
+    if client is None:
+        return g.error_resp[-2]
+    elif client.isConnected() is False:
         return g.error_resp[-1]
     client_id = client.clientId
     g.account_update_resp = dict(accountDownloadEnd=False, updateAccountValue=dict(), updatePortfolio=[])
