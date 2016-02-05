@@ -10,8 +10,13 @@ from handlers import connection_handler, history_handler, order_handler, portfol
 from flask import current_app
 
 __author__ = 'Jason Haury'
+
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
+log = utils.setup_logger(log)
 utils.setup_logger(log)
+
 
 
 def get_client(client_id=None):

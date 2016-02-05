@@ -23,11 +23,11 @@ __author__ = 'Jason Haury'
 
 app = Flask(__name__)
 api = Api(app)
-# Logging shortcut
-# log = app.logger
 log = logging.getLogger('werkzeug')
-utils.setup_logger(log)
+log.setLevel(logging.ERROR)
 
+log = logging.getLogger(__name__)
+log = utils.setup_logger(log)
 
 # ---------------------------------------------------------------------
 # RESOURCES
@@ -72,9 +72,8 @@ class Order(Resource):
         for arg in parsers.contract_parser.args:
             parser.add_argument(arg)
         args = parser.parse_args()
-        print "parsed args: {}".format(args)
         all_args = {k: v for k, v in request.values.iteritems()}
-        print "starting all args: {}".format(all_args)
+
         # update with validated data
         for k, v in args.iteritems():
             all_args[k] = v

@@ -29,5 +29,6 @@ def setup_logger(log):
     ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
     log.addHandler(ch)
+    return log
 
 

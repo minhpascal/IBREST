@@ -6,10 +6,14 @@ from ib.ext.Contract import Contract
 from ib.ext.Order import Order
 from ib.ext.OrderState import OrderState
 import logging
-log = logging.getLogger(__name__)
-utils.setup_logger(log)
+
 __author__ = 'Jason Haury'
 
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+log = logging.getLogger(__name__)
+log = utils.setup_logger(log)
+utils.setup_logger(log)
 
 # ---------------------------------------------------------------------
 # SHARED FUNCTIONS
@@ -36,10 +40,10 @@ def connection_handler(msg):
         g.orderId = max(int(msg.orderId), g.orderId)
         log.debug('Connection lock released.  OrderId set to {}'.format(g.orderId))
         g.getting_order_id = False  # Unlock place_order() to now be called again.
-        log.info('Updated orderID: {}'.format(g.orderId))
+        log.debug('Updated orderID: {}'.format(g.orderId))
     elif msg.typeName == 'managedAccounts':
         g.managedAccounts = msg.accountsList.split(',')
-        log.info('Updated managed accounts: {}'.format(g.managedAccounts))
+        log.debug('Updated managed accounts: {}'.format(g.managedAccounts))
 
 
 def account_summary_handler(msg):
