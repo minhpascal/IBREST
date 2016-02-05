@@ -7,7 +7,8 @@ from ib.ext.Contract import Contract
 from ib.ext.Order import Order
 from utils import make_contract
 import time
-from app import log
+import logging
+log = logging.getLogger(__name__)
 from datetime import datetime, timedelta
 
 __author__ = 'Jason Haury'

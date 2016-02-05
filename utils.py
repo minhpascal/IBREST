@@ -1,5 +1,8 @@
 """ Needs documentation
 """
+import logging
+import sys
+
 from ib.ext.Contract import Contract
 __author__ = 'Jason Haury'
 
@@ -13,3 +16,18 @@ def make_contract(symbol):
     contract.m_currency = 'USD'
     contract.m_localSymbol = symbol
     return contract
+
+# ---------------------------------------------------------------------
+# LOGGING SETUP
+# ---------------------------------------------------------------------
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+
+def setup_logger(log):
+    log.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+    log.addHandler(ch)
+
+

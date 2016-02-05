@@ -14,13 +14,19 @@ from flask_restful import Resource, Api, reqparse
 # IBREST imports
 import sync, feeds
 import parsers
+import globals as g
+import logging
+
+import utils
 
 __author__ = 'Jason Haury'
 
 app = Flask(__name__)
 api = Api(app)
 # Logging shortcut
-log = app.logger
+#log = app.logger
+log = logging.getLogger('werkzeug')
+utils.setup_logger(log)
 
 
 # ---------------------------------------------------------------------
@@ -147,6 +153,16 @@ class AccountUpdate(Resource):
         args = parser.parse_args()
         return sync.get_account_update(args['acctCode'])
 
+class ClientStates(Resource):
+    """ Explore what the connection states are for each client
+    """
+    def get(self):
+        resp = dict(connected=dict(), available=dict())
+        log.debug('Client pool: {}'.format(g.client_pool))
+        for id, client in g.client_pool.iteritems():
+            resp['connected'][id] = client.isConnected() if client is not None else None
+        resp['available'] = g.clientId_pool
+        return resp
 
 # ---------------------------------------------------------------------
 # ROUTING
@@ -157,6 +173,7 @@ api.add_resource(Order, '/order')
 api.add_resource(PortfolioPositions, '/account/positions')
 api.add_resource(AccountSummary, '/account/summary')
 api.add_resource(AccountUpdate, '/account/update')
+api.add_resource(ClientStates, '/clients')
 
 if __name__ == '__main__':
     import os
@@ -164,16 +181,22 @@ if __name__ == '__main__':
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
     # Enable HTTPS
+    '''
     from OpenSSL import SSL
     context = SSL.Context(SSL.SSLv23_METHOD)
     # TODO make certs and add to GAE.  Perhaps restrict communication to only those hosts?
     context.use_privatekey_file('yourserver.key')
     context.use_certificate_file('yourserver.crt')
     # TODO explore POODLE vulnerability and ssl vs OpenSSL modules per http://flask.pocoo.org/snippets/111/
-
+    '''
     # Connect to all clients
     for c in xrange(8):
-        client = connection.get_client(c)
-        connection.close_client(client)
-    app.run(debug=False, host=host, port=port, ssl_context=context)
+        client = g.client_pool[c]
+        client.connect()
+        g.client_pool[c] = client
+    log.debug('Client pool: {}'.format(g.client_pool))
+
+    # TODO set up SSL/HTTPS
+    #app.run(debug=False, host=host, port=port, ssl_context=context)
+    app.run(debug=False, host=host, port=port)
 

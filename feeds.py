@@ -2,11 +2,14 @@
 """
 import globals as g
 import time
-from app import log
+import logging
+import utils
 from connection import get_client, close_client
 from utils import make_contract
-__author__ = 'Jason Haury'
 
+__author__ = 'Jason Haury'
+log = logging.getLogger(__name__)
+utils.setup_logger(log)
 
 # ---------------------------------------------------------------------
 # MARKET DATA FUNCTIONS

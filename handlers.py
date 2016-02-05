@@ -1,11 +1,13 @@
 """ Needs documentation
 """
 import globals as g
+import utils
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
 from ib.ext.OrderState import OrderState
-from app import log
-
+import logging
+log = logging.getLogger(__name__)
+utils.setup_logger(log)
 __author__ = 'Jason Haury'
 
 
