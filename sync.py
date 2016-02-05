@@ -167,8 +167,7 @@ def place_order(args):
     log.debug('Placing order # {}'.format(orderId))
     client.placeOrder(orderId, contract, order)
 
-    # client.reqOpenOrders()
-    timeout = 8
+    timeout = g.timeout
     # while len(order_resp_by_order[orderId]['orderStatus']) == 0 and client.isConnected() is True and timeout > 0:
     while client.isConnected() is True and timeout > 0:
         log.info("Waiting for orderId {} responses on client {}...".format(orderId, client.clientId))
