@@ -9,7 +9,7 @@ from utils import make_contract
 
 __author__ = 'Jason Haury'
 log = logging.getLogger(__name__)
-utils.setup_logger(log)
+log = utils.setup_logger(log)
 
 # ---------------------------------------------------------------------
 # MARKET DATA FUNCTIONS

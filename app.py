@@ -23,8 +23,6 @@ __author__ = 'Jason Haury'
 
 app = Flask(__name__)
 api = Api(app)
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
 
 log = logging.getLogger(__name__)
 log = utils.setup_logger(log)

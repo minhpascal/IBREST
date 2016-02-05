@@ -11,11 +11,8 @@ from flask import current_app
 
 __author__ = 'Jason Haury'
 
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
 log = utils.setup_logger(log)
-utils.setup_logger(log)
 
 
 
@@ -45,7 +42,7 @@ def get_client(client_id=None):
     if client_id is None:
         return
 
-    log.info('Attempting connection with client_id {}'.format(client_id))
+    log.debug('Attempting connection with client_id {}'.format(client_id))
     client = g.client_pool[client_id]
 
     # Enable logging if we're in debug mode

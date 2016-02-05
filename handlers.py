@@ -9,11 +9,8 @@ import logging
 
 __author__ = 'Jason Haury'
 
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
 log = logging.getLogger(__name__)
 log = utils.setup_logger(log)
-utils.setup_logger(log)
 
 # ---------------------------------------------------------------------
 # SHARED FUNCTIONS

@@ -24,7 +24,10 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 
 
 def setup_logger(log):
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.INFO)
+    # Remove all other handlers:
+    #for hdlr in logging.Logger.manager.loggerDict.keys():
+    #    log.removeHandler(hdlr)
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(logging.INFO)
     ch.setFormatter(formatter)
