@@ -107,7 +107,7 @@ def error_handler(msg):
 
     IbPy provides and id of -1 for connection error messages
     """
-    g.error_resp[int(msg.id)] = {i[0]: i[1] for i in msg.items()}
+    g.error_resp[msg.id] = {i[0]: i[1] for i in msg.items()}
     log.error('ERROR: {}'.format(msg))
 
 

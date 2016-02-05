@@ -78,9 +78,6 @@ class Order(Resource):
         # update with validated data
         for k, v in args.iteritems():
             all_args[k] = v
-
-        # print "final args: {}".format(all_args)
-        log.debug('ARGS for POST to /order: {}'.format(all_args))
         return sync.place_order(all_args)
 
     def delete(self):
@@ -164,7 +161,6 @@ class ClientStates(Resource):
 
     def get(self):
         resp = dict(connected=dict(), available=dict())
-        log.debug('Client pool: {}'.format(g.client_pool))
         for id, client in g.client_pool.iteritems():
             resp['connected'][id] = client.isConnected() if client is not None else None
         resp['available'] = g.clientId_pool
@@ -185,14 +181,9 @@ api.add_resource(ClientStates, '/clients')
 if __name__ == '__main__':
     import os
     import connection
-
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
-    # Enable HTTPS
-    import ssl
-    # TODO upgrade OpenSSL to allow for newer PROTOCOL_TLSv1_2
-    context = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-    context.load_cert_chain('mycert.crt', 'mycert.key')
+    context = ('ibrest.crt', 'ibrest.key')
 
     # Connect to all clients
     for c in xrange(8):
@@ -200,7 +191,5 @@ if __name__ == '__main__':
         connection.setup_client(client)
         client.connect()
         g.client_pool[c] = client
-    log.debug('Client pool: {}'.format(g.client_pool))
 
     app.run(debug=False, host=host, port=port, ssl_context=context)
-    #app.run(debug=False, host=host, port=port)

@@ -21,6 +21,7 @@ def get_history(args):
     """ Args may be any of those in reqHistoricalData()
     https://www.interactivebrokers.com/en/software/api/apiguide/java/reqhistoricaldata.htm
     """
+    # TODO complete this endpoint
     client = get_client()
     if client is None:
         return g.error_resp[-2]
@@ -146,7 +147,7 @@ def place_order(args):
     for attr in dir(order):
         if attr[:2] == 'm_' and attr[2:] in args:
             setattr(order, attr, args[attr[2:]])
-    log.debug('Contract: {}, Order: {}'.format(contract.__dict__, order.__dict__))
+    #log.debug('Contract: {}, Order: {}'.format(contract.__dict__, order.__dict__))
     # Get our next valid order ID
     if args.get('orderId', None) is None:
         g.getting_order_id = True
