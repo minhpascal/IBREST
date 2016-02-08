@@ -77,7 +77,7 @@ class Order(Resource):
         for k, v in args.iteritems():
             all_args[k] = v
 
-        log.debug('all_args: {}'.format(all_args))
+        #log.debug('all_args: {}'.format(all_args))
         return utils.make_response(sync.place_order(all_args))
 
     def delete(self):

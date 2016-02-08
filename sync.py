@@ -185,8 +185,8 @@ def place_order(args):
         if totalQuantity is not None:
             order.m_totalQuantity = totalQuantity
     """
-    log.debug('Order: {}'.format(order.__dict__))
-    log.debug('Contract: {}'.format(contract.__dict__))
+    #log.debug('Order: {}'.format(order.__dict__))
+    #log.debug('Contract: {}'.format(contract.__dict__))
 
     g.error_resp[orderId] = None
     # Reset our order resp to prepare for new data
