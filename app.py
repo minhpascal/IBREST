@@ -19,6 +19,7 @@ import logging
 
 import utils
 
+# TODO use gevent to time.sleeps are non blocking
 __author__ = 'Jason Haury'
 
 app = Flask(__name__)
@@ -38,7 +39,7 @@ class History(Resource):
         """ Uses reqHistoricalData() to start a stream of historical data, then upon getting data in that streatm,
         cancels the stream with cancelHistoricalData() before returning the history
         """
-        return sync.get_history(request.args.copy())
+        return utils.make_response(sync.get_history(request.args.copy()))
 
 
 class Market(Resource):
@@ -50,7 +51,7 @@ class Market(Resource):
         :return: JSON dict of dicts, with main keys being tickPrice, tickSize and optionComputation.
         """
         # TODO add query string params for Contract, and create feed accordingly
-        return feeds.get_market_data(symbol)
+        return utils.make_response(feeds.get_market_data(symbol))
 
 
 class Order(Resource):
@@ -60,7 +61,7 @@ class Order(Resource):
     def get(self):
         """ Retrieves details of open orders using reqAllOpenOrders()
         """
-        return sync.get_open_orders()
+        return utils.make_response(sync.get_open_orders())
 
     def post(self):
         """ Places an order with placeOrder().  This requires enough args to create a Contract & and Order:
@@ -70,21 +71,23 @@ class Order(Resource):
         for arg in parsers.contract_parser.args:
             parser.add_argument(arg)
         args = parser.parse_args()
-        all_args = {k: v for k, v in request.values.iteritems()}
 
+        all_args = {k: v for k, v in request.values.iteritems()}
         # update with validated data
         for k, v in args.iteritems():
             all_args[k] = v
-        return sync.place_order(all_args)
+
+        log.debug('all_args: {}'.format(all_args))
+        return utils.make_response(sync.place_order(all_args))
 
     def delete(self):
         """ Cancels order with cancelOrder()
         """
-        parser = reqparse.RequestParser()
+        parser = reqparse.RequestParser(bundle_errors=True)
         parser.add_argument('orderId', type=int, required=True,
                             help='Order ID to cancel')
         args = parser.parse_args()
-        return sync.cancel_order(args['orderId'])
+        return utils.make_response(sync.cancel_order(args['orderId']))
 
 
 class PortfolioPositions(Resource):
@@ -95,7 +98,7 @@ class PortfolioPositions(Resource):
         """
         :return: JSON dict of dicts, with main keys being tickPrice, tickSize and optionComputation.
         """
-        return sync.get_portfolio_positions()
+        return utils.make_response(sync.get_portfolio_positions())
 
 
 class AccountSummary(Resource):
@@ -125,15 +128,15 @@ class AccountSummary(Resource):
         tags = args['tag'] + args['tags'].split(',')
         if len(tags) == 0:
             # No tags were passed, so throw an error
-            return dict(message=dict(tags='Must provide 1 or more `tag` args, and/or a CSV `tags` arg'))
+            return dict(message=dict(tags='Must provide 1 or more `tag` args, and/or a CSV `tags` arg')), 400
         # Reduce and re-validate
         tags = set(tags)
         if not tags.issubset(choices):
-            return dict(message=dict(tags='All tags must be from this set: {}'.format(choices)))
+            return dict(message=dict(tags='All tags must be from this set: {}'.format(choices))), 400
         # re-create CSV list
         tags = ','.join(list(tags))
         log.debug('TAGS: {}'.format(tags))
-        return sync.get_account_summary(tags)
+        return utils.make_response(sync.get_account_summary(tags))
 
 
 class AccountUpdate(Resource):
@@ -149,7 +152,7 @@ class AccountUpdate(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('acctCode', type=str, help='Account number/code', trim=True, required=True)
         args = parser.parse_args()
-        return sync.get_account_update(args['acctCode'])
+        return utils.make_response(sync.get_account_update(args['acctCode']))
 
 
 class ClientStates(Resource):
@@ -161,7 +164,7 @@ class ClientStates(Resource):
         for id, client in g.client_pool.iteritems():
             resp['connected'][id] = client.isConnected() if client is not None else None
         resp['available'] = g.clientId_pool
-        return resp
+        return utils.make_response(resp)
 
 
 # ---------------------------------------------------------------------
@@ -189,4 +192,4 @@ if __name__ == '__main__':
         client.connect()
         g.client_pool[c] = client
 
-    app.run(debug=False, host=host, port=port, ssl_context=context)
+    app.run(debug=False, host=host, port=port, ssl_context=context, processes=8)
