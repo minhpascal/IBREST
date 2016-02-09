@@ -167,6 +167,13 @@ class ClientStates(Resource):
         return utils.make_response(resp)
 
 
+class Test(Resource):
+    def get(self):
+        resp = ""
+        for k, v in  request.environ.iteritems():
+            resp += "{}: {}".format(str(k), str(v))
+        print request.environ.items()
+        return resp
 # ---------------------------------------------------------------------
 # ROUTING
 # ---------------------------------------------------------------------
@@ -177,6 +184,7 @@ api.add_resource(PortfolioPositions, '/account/positions')
 api.add_resource(AccountSummary, '/account/summary')
 api.add_resource(AccountUpdate, '/account/update')
 api.add_resource(ClientStates, '/clients')
+api.add_resource(Test, '/test')
 
 if __name__ == '__main__':
     import os
@@ -192,4 +200,5 @@ if __name__ == '__main__':
         client.connect()
         g.client_pool[c] = client
 
-    app.run(debug=False, host=host, port=port, ssl_context=context, processes=8)
+    # TODO We _could_ run 8 processes and tie each to a different client ID, and then remove client locks as a global
+    app.run(debug=False, host=host, port=port, ssl_context=context, threaded=True) #, processes=8)

@@ -58,7 +58,7 @@ def get_history(args):
     """
     timeout = g.timeout
     while len(g.history_resp[g.tickerId]) == 0 and timeout > 0:
-        log.debug("Waiting for responses on client {}...".format(client.clientId))
+        log.debug("Waiting for History responses on client {}...".format(client.clientId))
         if g.error_resp.get(g.tickerId, None) is not None:
             close_client(client)
             return g.error_resp[g.tickerId]
@@ -90,7 +90,7 @@ def get_open_orders():
     client.reqAllOpenOrders()
     timeout = g.timeout
     while g.order_resp['openOrderEnd'] is False and client.isConnected() is True and timeout > 0:
-        log.debug("Waiting for responses on client {}...".format(client.clientId))
+        log.debug("Waiting for Open Orders responses on client {}...".format(client.clientId))
         time.sleep(0.25)
         timeout -= 1
     close_client(client)
@@ -114,7 +114,7 @@ def cancel_order(orderId):
     client.cancelOrder(int(orderId))
     timeout = g.timeout
     while len(g.order_resp_by_order[orderId]['orderStatus']) == 0 and client.isConnected() is True and timeout > 0:
-        log.debug("Waiting for responses on client {}...".format(client.clientId))
+        log.debug("Waiting for Cancel Order responses on client {}...".format(client.clientId))
         if g.error_resp[orderId] is not None:
             close_client(client)
             return g.error_resp[orderId]
@@ -159,7 +159,7 @@ def place_order(args):
         client.reqIds(1)
         timeout = g.timeout
         while g.getting_order_id is True and timeout > 0:
-            log.debug('Waiting for new orderId')
+            log.debug('Waiting for new orderId {} more times...'.format(timeout))
             time.sleep(0.25)
             timeout -= 1
         orderId = g.orderId
@@ -196,7 +196,7 @@ def place_order(args):
 
     # If the input is good, we'll get no errors, so we can speed up this endpoint by not waiting for an error response
     # However, if we need to debug our input, this will help our cause
-    if current_app.debug is True:
+    if True: #current_app.debug is True:
         timeout = g.timeout
         while client.isConnected() is True and timeout > 0:
             log.debug("Waiting for orderId {} responses on client {} for {} more times...".
@@ -224,7 +224,7 @@ def get_portfolio_positions():
     client.reqPositions()
     timeout = g.timeout
     while g.portfolio_positions_resp['positionEnd'] is False and client.isConnected() is True and timeout > 0:
-        log.debug("Waiting for responses on client {}...".format(client.clientId))
+        log.debug("Waiting for Portfolio Positions responses on client {}...".format(client.clientId))
         time.sleep(0.25)
         timeout -= 1
     client.cancelPositions()
@@ -244,10 +244,11 @@ def get_account_summary(tags):
     g.account_summary_resp[client_id] = dict(accountSummaryEnd=False)
     client.reqAccountSummary(client_id, 'All', tags)
     timeout = g.timeout
-    while g.account_summary_resp[client_id][
-        'accountSummaryEnd'] is False and client.isConnected() is True and timeout > 0:
-        log.debug("Waiting for responses on client {}...".format(client.clientId))
-        time.sleep(0.25)
+    while g.account_summary_resp[client_id]['accountSummaryEnd'] is False \
+            and client.isConnected() is True \
+            and timeout > 0:
+        log.debug("Waiting for Account Summary responses on client {}...".format(client.clientId))
+        time.sleep(0.5)
         timeout -= 1
     # time.sleep(1)
     client.cancelAccountSummary(client_id)
