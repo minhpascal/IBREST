@@ -1,6 +1,7 @@
 """ Needs documentation
 """
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import sys
 
 from ib.ext.Contract import Contract
@@ -28,10 +29,20 @@ def setup_logger(log):
     # Remove all other handlers:
     #for hdlr in logging.Logger.manager.loggerDict.keys():
     #    log.removeHandler(hdlr)
+
+    # Add improved stdout logging
+    '''
     ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(formatter)
     log.addHandler(ch)
+    '''
+
+    # Add rotating file log handler
+    hdlr = TimedRotatingFileHandler('ibrest.log', when='D', backupCount=5)
+    hdlr.setLevel(logging.DEBUG)
+    hdlr.setFormatter(formatter)
+    log.addHandler(hdlr)
     return log
 
 

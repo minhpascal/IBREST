@@ -157,7 +157,8 @@ def place_order(args):
         # Get our next valid order ID
         g.getting_order_id = True
         client.reqIds(1)
-        timeout = g.timeout
+        # TODO call get open orders and look for orderId to be in a particular state or get an error, minimize waiting
+        timeout = g.timeout / 2
         while g.getting_order_id is True and timeout > 0:
             log.debug('Waiting for new orderId {} more times...'.format(timeout))
             time.sleep(0.25)
