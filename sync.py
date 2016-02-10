@@ -1,7 +1,8 @@
 """ Synchronous wrapper on IbPy to do heavy lifting for our Flask app.
 This module contains all IB client handling, even if connection will be used for a feed
 """
-from connection import get_client, close_client
+# TODO remove all uses of close_client
+from globals import get_client
 import globals as g
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
@@ -9,12 +10,12 @@ import utils
 import time
 import logging
 from datetime import datetime, timedelta
-from flask import current_app
 
 __author__ = 'Jason Haury'
 
 log = logging.getLogger(__name__)
 log = utils.setup_logger(log)
+
 
 # ---------------------------------------------------------------------
 # HISTORY FUNCTIONS
@@ -60,7 +61,7 @@ def get_history(args):
     while len(g.history_resp[g.tickerId]) == 0 and timeout > 0:
         log.debug("Waiting for History responses on client {}...".format(client.clientId))
         if g.error_resp.get(g.tickerId, None) is not None:
-            close_client(client)
+            #close_client(client)
             return g.error_resp[g.tickerId]
         elif client.isConnected() is False:
             return {'errorMsg': 'Connection lost'}
@@ -69,7 +70,7 @@ def get_history(args):
     log.debug('histor: {}'.format(g.history_resp))
     resp = g.history_resp[g.tickerId].copy()
     client.cancelHistoricalData(g.tickerId)
-    close_client(client)
+    #close_client(client)
     return resp
 
 
@@ -93,15 +94,13 @@ def get_open_orders():
         log.debug("Waiting for Open Orders responses on client {}...".format(client.clientId))
         time.sleep(0.25)
         timeout -= 1
-    close_client(client)
+    #close_client(client)
     return g.order_resp
 
 
 def cancel_order(orderId):
     """ Uses cancelOrder to cancel an order.  The only response is what comes back right away (no EWrapper messages)
     """
-    g.error_resp[orderId] = None  # Reset our error for later
-
     client = get_client()
     if client is None:
         return g.error_resp[-2]
@@ -111,16 +110,18 @@ def cancel_order(orderId):
     log.info('Cancelling order {}'.format(orderId))
     # Reset our order resp to prepare for new data
     g.order_resp_by_order[orderId] = dict(openOrder=dict(), orderStatus=dict())
+    g.error_resp[orderId] = None  # Reset our error for later
+
     client.cancelOrder(int(orderId))
     timeout = g.timeout
     while len(g.order_resp_by_order[orderId]['orderStatus']) == 0 and client.isConnected() is True and timeout > 0:
         log.debug("Waiting for Cancel Order responses on client {}...".format(client.clientId))
         if g.error_resp[orderId] is not None:
-            close_client(client)
+            #close_client(client)
             return g.error_resp[orderId]
         time.sleep(0.25)
         timeout -= 1
-    close_client(client)
+    #close_client(client)
     resp = g.order_resp.copy()
     # Cancelling an order also produces an error, we'll capture that here too
     resp['error'] = g.error_resp[orderId]
@@ -143,7 +144,7 @@ def place_order(args):
     * currency
     * exchange
     """
-    client = get_client(0)
+    client = get_client()
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -151,65 +152,39 @@ def place_order(args):
 
     # If an orderId was provided, we'll be updating an existing order, so only send attributes which are updatable:
     # totalQuantity, orderType, symbol, secType, action
-
-    orderId = args.get('orderId', None)
-    if orderId is None:
-        # Get our next valid order ID
-        g.getting_order_id = True
-        client.reqIds(1)
-        # TODO call get open orders and look for orderId to be in a particular state or get an error, minimize waiting
-        timeout = g.timeout / 2
-        while g.getting_order_id is True and timeout > 0:
-            log.debug('Waiting for new orderId {} more times...'.format(timeout))
-            time.sleep(0.25)
-            timeout -= 1
-        orderId = g.orderId
-
+    orderId = args.get('orderId', orderId=g.orderId)
     contract = Contract()
     order = Order()
-
-
     # Populate contract with appropriate args
     for attr in dir(contract):
-        if attr[:2] == 'm_' and attr[2:] in args: # and attr != 'm_orderId':
+        if attr[:2] == 'm_' and attr[2:] in args:
             setattr(contract, attr, args[attr[2:]])
     # Populate order with appropriate
     order.m_clientId = client.clientId
     for attr in dir(order):
-        if attr[:2] == 'm_' and attr[2:] in args:# and attr != 'm_orderId':
+        if attr[:2] == 'm_' and attr[2:] in args:
             setattr(order, attr, args[attr[2:]])
-    """
-    else:
-        # we're updating an order:
-        order.m_orderId = int(orderId)
-        totalQuantity = args.get('totalQuantity', None)
-        if totalQuantity is not None:
-            order.m_totalQuantity = totalQuantity
-    """
-    #log.debug('Order: {}'.format(order.__dict__))
-    #log.debug('Contract: {}'.format(contract.__dict__))
 
     g.error_resp[orderId] = None
     # Reset our order resp to prepare for new data
     g.order_resp_by_order[orderId] = dict(openOrder=dict(), orderStatus=dict())
-    log.debug('Placing order # {} on client # {} {} '.format(orderId, client.clientId, client.isConnected()))
+    g.error_resp[orderId] = None  # Reset our error for later
+    log.debug('Placing order # {} on client # {} (connected={}) '.format(orderId, client.clientId, client.isConnected()))
     client.placeOrder(orderId, contract, order)
+    # The only response for placing an order is an error, so we'll check for open orders and wait for this orderId or
+    # and error to show up.
 
-    # If the input is good, we'll get no errors, so we can speed up this endpoint by not waiting for an error response
-    # However, if we need to debug our input, this will help our cause
-    if True: #current_app.debug is True:
-        timeout = g.timeout
-        while client.isConnected() is True and timeout > 0:
-            log.debug("Waiting for orderId {} responses on client {} for {} more times...".
-                      format(orderId, client.clientId, timeout))
-            if g.error_resp[orderId] is not None:
-                close_client(client)
-                return g.error_resp[orderId]
-            time.sleep(0.25)
-            timeout -= 1
-
-    close_client(client)
-    return {'status': 'OK'}
+    client.reqOpenOrders()
+    timeout = g.timeout
+    while len(g.order_resp_by_order[orderId]['orderStatus']) == 0 and client.isConnected() is True and timeout > 0:
+        log.debug("Waiting for orderId {} responses for {} more times...".format(orderId, timeout))
+        if g.error_resp[orderId] is not None:
+            #close_client(client)
+            return g.error_resp[orderId]
+        time.sleep(0.25)
+        timeout -= 1
+    #close_client(client)
+    return g.order_resp_by_order[orderId]
 
 
 # ---------------------------------------------------------------------
@@ -229,7 +204,7 @@ def get_portfolio_positions():
         time.sleep(0.25)
         timeout -= 1
     client.cancelPositions()
-    close_client(client)
+    #close_client(client)
     return g.portfolio_positions_resp
 
 
@@ -241,20 +216,18 @@ def get_account_summary(tags):
         return g.error_resp[-2]
     elif client.isConnected() is False:
         return g.error_resp[-1]
-    client_id = client.clientId
-    g.account_summary_resp[client_id] = dict(accountSummaryEnd=False)
-    client.reqAccountSummary(client_id, 'All', tags)
+    g.account_summary_resp = dict(accountSummaryEnd=False)
+    client.reqAccountSummary(1, 'All', tags)
     timeout = g.timeout
-    while g.account_summary_resp[client_id]['accountSummaryEnd'] is False \
+    while g.account_summary_resp['accountSummaryEnd'] is False \
             and client.isConnected() is True \
             and timeout > 0:
         log.debug("Waiting for Account Summary responses on client {}...".format(client.clientId))
         time.sleep(0.5)
         timeout -= 1
-    # time.sleep(1)
-    client.cancelAccountSummary(client_id)
-    close_client(client)
-    return g.account_summary_resp[client_id]
+    client.cancelAccountSummary(63, 1, 1)
+    #close_client(client)
+    return g.account_summary_resp
 
 
 def get_account_update(acctCode):
@@ -276,5 +249,5 @@ def get_account_update(acctCode):
         timeout -= 1
         log.debug('Current update {}'.format(g.account_update_resp))
     client.cancelAccountSummary(client_id)
-    close_client(client)
+    #close_client(client)
     return g.account_update_resp

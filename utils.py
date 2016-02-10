@@ -2,7 +2,7 @@
 """
 import logging
 from logging.handlers import TimedRotatingFileHandler
-import sys
+import globals as g
 
 from ib.ext.Contract import Contract
 __author__ = 'Jason Haury'
@@ -25,22 +25,14 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 
 
 def setup_logger(log):
+    if True:
+        lvl = logging.DEBUG
+    else:
+        lvl = logging.INFO
     log.setLevel(logging.DEBUG)
-    # Remove all other handlers:
-    #for hdlr in logging.Logger.manager.loggerDict.keys():
-    #    log.removeHandler(hdlr)
-
-    # Add improved stdout logging
-    '''
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.DEBUG)
-    ch.setFormatter(formatter)
-    log.addHandler(ch)
-    '''
-
-    # Add rotating file log handler
+    # Add rotating file log handler to capture all `lvl` messages
     hdlr = TimedRotatingFileHandler('ibrest.log', when='D', backupCount=5)
-    hdlr.setLevel(logging.DEBUG)
+    hdlr.setLevel(lvl)
     hdlr.setFormatter(formatter)
     log.addHandler(hdlr)
     return log

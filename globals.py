@@ -1,10 +1,18 @@
-""" Needs documentation
+""" These globals are used to glue the asyncronous messages together to form a synchronous system.  Each set of globals
+are unique to a process, and each process makes use of a single clientId.  Thus, the clientId is set to match the PID.
+Furthermore, orderId's can now be auto-incremented by code rather than fetching the nextOrderId before each order
 """
 import os
 from ib.opt import ibConnection
+from handlers import connection_handler, history_handler, order_handler, portfolio_positions_handler, \
+    account_summary_handler, account_update_handler, error_handler, market_handler
+import logging
+import utils
+from flask import current_app
 
 __author__ = 'Jason Haury'
-
+log = logging.getLogger(__name__)
+log = utils.setup_logger(log)
 
 # ---------------------------------------------------------------------
 # CONFIGURATION
@@ -16,19 +24,46 @@ timeout = 20  # Max loops
 
 # Mutables
 managedAccounts = []
-clientId_pool = [0, 1, 2, 3, 4, 5, 6, 7]  # Round-robbin list of clientId's
-client_pool = {c: ibConnection(ibgw_host, ibgw_port, c) for c in xrange(8)}
-getting_order_id = False
 orderId = 0
 tickerId = 0
 
+
+
+# ---------------------------------------------------------------------
+# CONNECTION
+# ---------------------------------------------------------------------
+clientId = os.getpid()
+client = ibConnection(ibgw_host, ibgw_port, clientId)
+# Enable logging if we're in debug mode
+client.register(connection_handler, 'ManagedAccounts', 'NextValidId')
+client.register(history_handler, 'HistoricalData')
+client.register(order_handler, 'OpenOrder', 'OrderStatus', 'OpenOrderEnd')
+client.register(portfolio_positions_handler, 'Position', 'PositionEnd')
+client.register(account_summary_handler, 'AccountSummary', 'AccountSummaryEnd')
+client.register(account_update_handler, 'UpdateAccountTime', 'UpdateAccountValue', 'UpdatePortfolio',
+                'AccountDownloadEnd')
+client.register(error_handler, 'Error')
+# Add handlers for feeds
+client.register(market_handler, 'TickSize', 'TickPrice')
+client.connect()
+
+def get_client():
+    """ Gets the global client and ensures it's still connected
+    """
+    if current_app.debug is True:
+        client.enableLogging()
+    log.debug('Attempting connection with client_id {}'.format(clientId))
+    # Reconnect if needed
+    if not client.isConnected():
+        client.connect()
+    return client
 
 # ---------------------------------------------------------------------
 # SYNCHRONOUS RESPONSES
 # ---------------------------------------------------------------------
 # Responses.  Global dicts to use for our responses as updated by Message handlers, keyed by clientId
-portfolio_positions_resp = {c: dict() for c in xrange(8)}
-account_summary_resp = {c: dict(accountSummaryEnd=False) for c in xrange(8)}
+portfolio_positions_resp = dict()
+account_summary_resp = dict(accountSummaryEnd=False)
 account_update_resp = dict(accountDownloadEnd=False, updateAccountValue=dict(), updatePortfolio=[])
 # Track errors keyed in "id" which is the orderId or tickerId (or -1 for connection errors)
 error_resp = {-1: {"errorCode": 502, "errorMsg": "Couldn't connect to TWS.  Confirm that \"Enable ActiveX and Socket "
@@ -46,4 +81,6 @@ history_resp = dict()
 # FEED RESPONSE BUFFERS
 # ---------------------------------------------------------------------
 # Globals to use for feed responses
-market_resp = {c: [] for c in xrange(8)}  # market feed
+market_resp = []  # market feed
+
+

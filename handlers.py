@@ -12,6 +12,7 @@ __author__ = 'Jason Haury'
 log = logging.getLogger(__name__)
 log = utils.setup_logger(log)
 
+
 # ---------------------------------------------------------------------
 # SHARED FUNCTIONS
 # ---------------------------------------------------------------------
@@ -35,8 +36,6 @@ def connection_handler(msg):
     """
     if msg.typeName == 'nextValidId':
         g.orderId = max(int(msg.orderId), g.orderId)
-        log.debug('Connection lock released.  OrderId set to {}'.format(g.orderId))
-        g.getting_order_id = False  # Unlock place_order() to now be called again.
         log.debug('Updated orderID: {}'.format(g.orderId))
     elif msg.typeName == 'managedAccounts':
         g.managedAccounts = msg.accountsList.split(',')
@@ -95,7 +94,10 @@ def order_handler(msg):
     if msg.typeName in ['orderStatus', 'openOrder']:
         d = msg_to_dict(msg)
         g.order_resp[msg.typeName].append(d.copy())
-        g.order_resp_by_order.get(d['orderId'], dict(openOrder=dict(), orderStatus=dict()))[msg.typeName] = d.copy()
+        order_msg = g.order_resp_by_order.get(d['orderId'], dict(openOrder=dict(), orderStatus=dict()))
+        order_msg[msg.typeName] = d.copy()
+        g.order_resp_by_order[d['orderId']] = order_msg
+
     elif msg.typeName == 'openOrderEnd':
         g.order_resp['openOrderEnd'] = True
     log.debug('ORDER: {})'.format(msg))

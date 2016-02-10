@@ -119,13 +119,13 @@ class AccountSummary(Resource):
                    "LookAheadAvailableFunds", "LookAheadExcessLiquidity", "HighestSeverity", "DayTradesRemaining",
                    "Leverage"}
         parser = reqparse.RequestParser(bundle_errors=True)
-        parser.add_argument('tags', type=str, help='CSV list of tags from this set: {}'.format(choices), trim=True,
-                            default='')
+        parser.add_argument('tags', type=str, help='CSV list of tags from this set: {}'.format(choices), trim=True)
         parser.add_argument('tag', type=str, action='append', help='Account information you want to see: {error_msg}',
                             trim=True, choices=choices, default=[])
         args = parser.parse_args()
         # Make a master list of tags from all possible arguments
-        tags = args['tag'] + args['tags'].split(',')
+        tags = args['tag']
+        tags += args['tags'].split(',') if args['tags']  is not None else []
         if len(tags) == 0:
             # No tags were passed, so throw an error
             return dict(message=dict(tags='Must provide 1 or more `tag` args, and/or a CSV `tags` arg')), 400
@@ -188,17 +188,10 @@ api.add_resource(Test, '/test')
 
 if __name__ == '__main__':
     import os
-    import connection
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
     context = ('ibrest.crt', 'ibrest.key')
 
-    # Connect to all clients
-    for c in xrange(8):
-        client = g.client_pool[c]
-        connection.setup_client(client)
-        client.connect()
-        g.client_pool[c] = client
-
-    # TODO We _could_ run 8 processes and tie each to a different client ID, and then remove client locks as a global
-    app.run(debug=False, host=host, port=port, ssl_context=context, threaded=True) #, processes=8)
+    # Run 8 processes to max out using 8 avaialble simultaneous connections.  Each clientId is selected by app to
+    # match its process ID
+    app.run(debug=False, host=host, port=port, ssl_context=context, processes=8)
