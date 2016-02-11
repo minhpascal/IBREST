@@ -4,7 +4,7 @@ import globals as g
 import time
 import logging
 import utils
-from connection import get_client
+from connection import get_client, close_client
 from utils import make_contract
 
 __author__ = 'Jason Haury'
@@ -41,4 +41,5 @@ def get_market_data(symbol):
     while len(g.market_resp) < 5 and client.isConnected() is True:
         log.info("Waiting for responses on {}...".format(client))
         time.sleep(1)
+    print 'disconnected', close_client(client)
     return g.market_resp

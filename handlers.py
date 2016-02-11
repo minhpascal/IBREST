@@ -1,6 +1,7 @@
 """ Needs documentation
 """
-import globals as g
+#import globals as g
+from flask import g
 import utils
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
@@ -11,7 +12,6 @@ __author__ = 'Jason Haury'
 
 log = logging.getLogger(__name__)
 log = utils.setup_logger(log)
-
 
 # ---------------------------------------------------------------------
 # SHARED FUNCTIONS
@@ -36,6 +36,8 @@ def connection_handler(msg):
     """
     if msg.typeName == 'nextValidId':
         g.orderId = max(int(msg.orderId), g.orderId)
+        log.debug('Connection lock released.  OrderId set to {}'.format(g.orderId))
+        g.getting_order_id = False  # Unlock place_order() to now be called again.
         log.debug('Updated orderID: {}'.format(g.orderId))
     elif msg.typeName == 'managedAccounts':
         g.managedAccounts = msg.accountsList.split(',')
@@ -45,14 +47,11 @@ def connection_handler(msg):
 def account_summary_handler(msg):
     """ Update our global Account Summary data response dict
     """
-    #log.debug('SUMMARY typeName: {}'.format(msg.typeName))
     if msg.typeName == 'accountSummary':
         # account = msg_to_dict(msg)
-        #log.debug('SUMMARY {} = {}'.format(msg.tag, msg.value))
-        g.account_summary_resp[msg.tag] = msg.value
-        log.debug('SUMMARY: new global val: {}'.format(g.account_summary_resp))
+        g.account_summary_resp[int(msg.reqId)][msg.tag] = msg.value
     elif msg.typeName == 'accountSummaryEnd':
-        g.account_summary_resp['accountSummaryEnd'] = True
+        g.account_summary_resp[int(msg.reqId)]['accountSummaryEnd'] = True
     log.debug('SUMMARY: {})'.format(msg))
 
 

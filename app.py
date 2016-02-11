@@ -9,14 +9,15 @@ The HTTP response is handled by compiling messages from EWrappper Methods into J
 https://www.interactivebrokers.com/en/software/api/apiguide/java/java_ewrapper_methods.htm
 """
 # Flask imports
-from flask import Flask, request
+from flask import Flask, request, g
 from flask_restful import Resource, Api, reqparse
 # IBREST imports
 import sync, feeds
 import parsers
-import globals as g
+import globals
+#import globals as g
 import logging
-import connection
+
 import utils
 
 # TODO use gevent to time.sleeps are non blocking
@@ -188,10 +189,21 @@ api.add_resource(Test, '/test')
 
 if __name__ == '__main__':
     import os
+    import connection
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
     context = ('ibrest.crt', 'ibrest.key')
-    connection.get_client()
-    # Run 8 processes to max out using 8 avaialble simultaneous connections.  Each clientId is selected by app to
-    # match its process ID
-    app.run(debug=False, host=host, port=port, ssl_context=context)#, processes=8)
+    # Set up globals in flask.g object
+    for attr in dir(globals):
+        if attr[:2] != '__':
+            setattr(g, attr, getattr(globals, attr))
+
+    # Connect to all clients
+    for c in xrange(8):
+        client = g.client_pool[c]
+        connection.setup_client(client)
+        client.connect()
+        g.client_pool[c] = client
+
+    # TODO We _could_ run 8 processes and tie each to a different client ID, and then remove client locks as a global
+    app.run(debug=False, host=host, port=port, ssl_context=context, processes=8)

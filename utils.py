@@ -2,8 +2,9 @@
 """
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from ib.ext.Contract import Contract
+import sys
 
+from ib.ext.Contract import Contract
 __author__ = 'Jason Haury'
 
 
@@ -24,14 +25,12 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 
 
 def setup_logger(log):
-    if True:
-        lvl = logging.DEBUG
-    else:
-        lvl = logging.INFO
     log.setLevel(logging.DEBUG)
-    # Add rotating file log handler to capture all `lvl` messages
+    # TODO if app in debug mode, set the debug level to DEBUG, else INFO
+
+    # Add rotating file log handler
     hdlr = TimedRotatingFileHandler('ibrest.log', when='D', backupCount=5)
-    hdlr.setLevel(lvl)
+    hdlr.setLevel(logging.DEBUG)
     hdlr.setFormatter(formatter)
     log.addHandler(hdlr)
     return log
