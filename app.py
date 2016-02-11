@@ -16,7 +16,7 @@ import sync, feeds
 import parsers
 import globals as g
 import logging
-
+import connection
 import utils
 
 # TODO use gevent to time.sleeps are non blocking
@@ -191,7 +191,7 @@ if __name__ == '__main__':
     host = os.getenv('IBREST_HOST', '127.0.0.1')
     port = int(os.getenv('IBREST_PORT', '5000'))
     context = ('ibrest.crt', 'ibrest.key')
-
+    connection.get_client()
     # Run 8 processes to max out using 8 avaialble simultaneous connections.  Each clientId is selected by app to
     # match its process ID
-    app.run(debug=False, host=host, port=port, ssl_context=context, processes=8)
+    app.run(debug=False, host=host, port=port, ssl_context=context)#, processes=8)

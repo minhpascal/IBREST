@@ -45,9 +45,12 @@ def connection_handler(msg):
 def account_summary_handler(msg):
     """ Update our global Account Summary data response dict
     """
+    #log.debug('SUMMARY typeName: {}'.format(msg.typeName))
     if msg.typeName == 'accountSummary':
         # account = msg_to_dict(msg)
+        #log.debug('SUMMARY {} = {}'.format(msg.tag, msg.value))
         g.account_summary_resp[msg.tag] = msg.value
+        log.debug('SUMMARY: new global val: {}'.format(g.account_summary_resp))
     elif msg.typeName == 'accountSummaryEnd':
         g.account_summary_resp['accountSummaryEnd'] = True
     log.debug('SUMMARY: {})'.format(msg))

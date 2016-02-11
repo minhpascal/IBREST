@@ -26,6 +26,8 @@ tickerId = 0
 # ---------------------------------------------------------------------
 clientId = os.getpid()
 client = ibConnection(ibgw_host, ibgw_port, clientId)
+#client.connect()
+
 
 # ---------------------------------------------------------------------
 # SYNCHRONOUS RESPONSES

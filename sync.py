@@ -1,7 +1,6 @@
 """ Synchronous wrapper on IbPy to do heavy lifting for our Flask app.
 This module contains all IB client handling, even if connection will be used for a feed
 """
-# TODO remove all uses of close_client
 from connection import get_client
 import globals as g
 from ib.ext.Contract import Contract
@@ -28,7 +27,7 @@ def get_history(args):
     https://www.interactivebrokers.com/en/software/api/apiguide/java/reqhistoricaldata.htm
     """
     # TODO complete this endpoint
-    client = get_client()
+    client = g.client
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -64,7 +63,6 @@ def get_history(args):
     while len(g.history_resp[g.tickerId]) == 0 and timeout > 0:
         log.debug("Waiting for History responses on client {}...".format(client.clientId))
         if g.error_resp.get(g.tickerId, None) is not None:
-            #close_client(client)
             return g.error_resp[g.tickerId]
         elif client.isConnected() is False:
             return {'errorMsg': 'Connection lost'}
@@ -73,7 +71,6 @@ def get_history(args):
     log.debug('histor: {}'.format(g.history_resp))
     resp = g.history_resp[g.tickerId].copy()
     client.cancelHistoricalData(g.tickerId)
-    #close_client(client)
     return resp
 
 
@@ -83,7 +80,7 @@ def get_history(args):
 def get_open_orders():
     """ Uses reqAllOpenOrders to get all open orders from 
     """
-    client = get_client()
+    client = g.client
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -97,14 +94,13 @@ def get_open_orders():
         log.debug("Waiting for Open Orders responses on client {}...".format(client.clientId))
         time.sleep(0.25)
         timeout -= 1
-    #close_client(client)
     return g.order_resp
 
 
 def cancel_order(orderId):
     """ Uses cancelOrder to cancel an order.  The only response is what comes back right away (no EWrapper messages)
     """
-    client = get_client()
+    client = g.client
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -120,11 +116,9 @@ def cancel_order(orderId):
     while len(g.order_resp_by_order[orderId]['orderStatus']) == 0 and client.isConnected() is True and timeout > 0:
         log.debug("Waiting for Cancel Order responses on client {}...".format(client.clientId))
         if g.error_resp[orderId] is not None:
-            #close_client(client)
             return g.error_resp[orderId]
         time.sleep(0.25)
         timeout -= 1
-    #close_client(client)
     resp = g.order_resp.copy()
     # Cancelling an order also produces an error, we'll capture that here too
     resp['error'] = g.error_resp[orderId]
@@ -147,7 +141,7 @@ def place_order(args):
     * currency
     * exchange
     """
-    client = get_client()
+    client = g.client
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -182,11 +176,9 @@ def place_order(args):
     while len(g.order_resp_by_order[orderId]['orderStatus']) == 0 and client.isConnected() is True and timeout > 0:
         log.debug("Waiting for orderId {} responses for {} more times...".format(orderId, timeout))
         if g.error_resp[orderId] is not None:
-            #close_client(client)
             return g.error_resp[orderId]
         time.sleep(0.25)
         timeout -= 1
-    #close_client(client)
     return g.order_resp_by_order[orderId]
 
 
@@ -207,14 +199,14 @@ def get_portfolio_positions():
         time.sleep(0.25)
         timeout -= 1
     client.cancelPositions()
-    #close_client(client)
     return g.portfolio_positions_resp
 
 
 def get_account_summary(tags):
     """ Calls reqAccountSummary() then listens for accountSummary messages()
     """
-    client = get_client()
+    #client = get_client()
+    client = g.client
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -227,17 +219,16 @@ def get_account_summary(tags):
             and timeout > 0:
         log.debug("Waiting for Account Summary responses on client {}...".format(client.clientId))
         log.debug("{}".format(g.account_summary_resp))
-        time.sleep(0.5)
+        time.sleep(0.25)
         timeout -= 1
     client.cancelAccountSummary(1)
-    #close_client(client)
     return g.account_summary_resp
 
 
 def get_account_update(acctCode):
     """ Calls reqAccountUpdates(subscribe=False) then listens for accountAccountTime/AccountValue/Portfolio messages
     """
-    client = get_client()
+    client = g.client
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -253,5 +244,4 @@ def get_account_update(acctCode):
         timeout -= 1
         log.debug('Current update {}'.format(g.account_update_resp))
     client.cancelAccountSummary(client_id)
-    #close_client(client)
     return g.account_update_resp

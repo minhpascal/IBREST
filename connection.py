@@ -22,8 +22,8 @@ def get_client():
     # Reconnect if needed
     if not hasattr(g.client, 'isConnected') or not g.client.isConnected():
 
-        if current_app.debug is True:
-            g.client.enableLogging()
+        #if current_app.debug is True:
+        #    g.client.enableLogging()
         # Enable logging if we're in debug mode
         g.client.register(connection_handler, 'ManagedAccounts', 'NextValidId')
         g.client.register(history_handler, 'HistoricalData')
