@@ -25,7 +25,7 @@ def get_client(client_id=None):
         log.debug('Current clients available: {}'.format(g.clientId_pool))
         timeout = g.timeout
         while len(g.clientId_pool) == 0 and timeout > 0:
-            log.debug('Waiting for clientId to become available...({})'.format(timeout))
+            log.info('Waiting for clientId to become available...({})'.format(timeout))
             time.sleep(0.5)
             timeout -= 1
         try:

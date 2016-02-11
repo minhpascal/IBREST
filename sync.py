@@ -3,7 +3,7 @@ This module contains all IB client handling, even if connection will be used for
 """
 from connection import get_client, close_client
 import globals as g
-#from flask import g
+# from flask import g
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
 import utils
@@ -16,6 +16,7 @@ __author__ = 'Jason Haury'
 
 log = logging.getLogger(__name__)
 log = utils.setup_logger(log)
+
 
 # ---------------------------------------------------------------------
 # HISTORY FUNCTIONS
@@ -144,7 +145,8 @@ def place_order(args):
     * currency
     * exchange
     """
-    client = get_client(0)
+    # TODO do we need client 0 if we're modifying an order?
+    client = get_client()
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -153,8 +155,9 @@ def place_order(args):
     # If an orderId was provided, we'll be updating an existing order, so only send attributes which are updatable:
     # totalQuantity, orderType, symbol, secType, action
 
-    #TODO which implementation?
+    # TODO which implementation?
     #orderId = args.get('orderId', orderId=g.orderId)
+
     orderId = args.get('orderId', None)
     if orderId is None:
         # Get our next valid order ID
@@ -171,7 +174,6 @@ def place_order(args):
     contract = Contract()
     order = Order()
 
-
     # Populate contract with appropriate args
     for attr in dir(contract):
         if attr[:2] == 'm_' and attr[2:] in args:
@@ -182,11 +184,11 @@ def place_order(args):
         if attr[:2] == 'm_' and attr[2:] in args:
             setattr(order, attr, args[attr[2:]])
 
-    g.error_resp[orderId] = None
     # Reset our order resp to prepare for new data
     g.order_resp_by_order[orderId] = dict(openOrder=dict(), orderStatus=dict())
     g.error_resp[orderId] = None  # Reset our error for later
-    log.debug('Placing order # {} on client # {} (connected={}) '.format(orderId, client.clientId, client.isConnected()))
+    log.debug(
+        'Placing order # {} on client # {} (connected={}) '.format(orderId, client.clientId, client.isConnected()))
     client.placeOrder(orderId, contract, order)
     # The only response for placing an order is an error, so we'll check for open orders and wait for this orderId or
     # and error to show up.
