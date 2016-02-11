@@ -3,8 +3,8 @@
 import time
 # from app import log
 import logging
-#import globals as g
-from flask import g
+import globals as g
+#from flask import g
 import utils
 from handlers import connection_handler, history_handler, order_handler, portfolio_positions_handler, \
     account_summary_handler, account_update_handler, error_handler, market_handler
@@ -43,7 +43,7 @@ def get_client(client_id=None):
     if client_id is None:
         return
 
-    log.debug('Attempting connection with client_id {}'.format(client_id))
+    log.info('Attempting connection with client_id {}'.format(client_id))
     client = g.client_pool[client_id]
 
     # Enable logging if we're in debug mode

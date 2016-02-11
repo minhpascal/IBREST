@@ -1,7 +1,7 @@
 """ Needs documentation
 """
-#import globals as g
-from flask import g
+import globals as g
+#from flask import g
 import utils
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order

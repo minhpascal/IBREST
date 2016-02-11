@@ -2,8 +2,8 @@
 This module contains all IB client handling, even if connection will be used for a feed
 """
 from connection import get_client, close_client
-#import globals as g
-from flask import g
+import globals as g
+#from flask import g
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
 import utils

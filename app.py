@@ -9,13 +9,13 @@ The HTTP response is handled by compiling messages from EWrappper Methods into J
 https://www.interactivebrokers.com/en/software/api/apiguide/java/java_ewrapper_methods.htm
 """
 # Flask imports
-from flask import Flask, request, g
+from flask import Flask, request #, g
 from flask_restful import Resource, Api, reqparse
 # IBREST imports
 import sync, feeds
 import parsers
 import globals
-#import globals as g
+import globals as g
 import logging
 
 import utils
@@ -126,7 +126,7 @@ class AccountSummary(Resource):
         args = parser.parse_args()
         # Make a master list of tags from all possible arguments
         tags = args['tag']
-        tags += args['tags'].split(',') if args['tags']  is not None else []
+        tags += args['tags'].split(',') if args['tags'] is not None else []
         if len(tags) == 0:
             # No tags were passed, so throw an error
             return dict(message=dict(tags='Must provide 1 or more `tag` args, and/or a CSV `tags` arg')), 400
@@ -194,10 +194,11 @@ if __name__ == '__main__':
     port = int(os.getenv('IBREST_PORT', '5000'))
     context = ('ibrest.crt', 'ibrest.key')
     # Set up globals in flask.g object
+    '''
     for attr in dir(globals):
         if attr[:2] != '__':
             setattr(g, attr, getattr(globals, attr))
-
+    '''
     # Connect to all clients
     for c in xrange(8):
         client = g.client_pool[c]
@@ -206,4 +207,4 @@ if __name__ == '__main__':
         g.client_pool[c] = client
 
     # TODO We _could_ run 8 processes and tie each to a different client ID, and then remove client locks as a global
-    app.run(debug=False, host=host, port=port, ssl_context=context, processes=8)
+    app.run(debug=False, host=host, port=port, ssl_context=context, threaded=True)

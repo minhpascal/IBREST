@@ -25,12 +25,12 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 
 
 def setup_logger(log):
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.INFO)
     # TODO if app in debug mode, set the debug level to DEBUG, else INFO
 
     # Add rotating file log handler
     hdlr = TimedRotatingFileHandler('ibrest.log', when='D', backupCount=5)
-    hdlr.setLevel(logging.DEBUG)
+    hdlr.setLevel(logging.INFO)
     hdlr.setFormatter(formatter)
     log.addHandler(hdlr)
     return log
