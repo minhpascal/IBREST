@@ -4,7 +4,7 @@ import globals as g
 import time
 import logging
 import utils
-from globals import get_client
+from connection import get_client
 from utils import make_contract
 
 __author__ = 'Jason Haury'

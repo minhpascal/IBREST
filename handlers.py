@@ -47,9 +47,9 @@ def account_summary_handler(msg):
     """
     if msg.typeName == 'accountSummary':
         # account = msg_to_dict(msg)
-        g.account_summary_resp[int(msg.reqId)][msg.tag] = msg.value
+        g.account_summary_resp[msg.tag] = msg.value
     elif msg.typeName == 'accountSummaryEnd':
-        g.account_summary_resp[int(msg.reqId)]['accountSummaryEnd'] = True
+        g.account_summary_resp['accountSummaryEnd'] = True
     log.debug('SUMMARY: {})'.format(msg))
 
 

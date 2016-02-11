@@ -2,9 +2,8 @@
 """
 import logging
 from logging.handlers import TimedRotatingFileHandler
-import globals as g
-
 from ib.ext.Contract import Contract
+
 __author__ = 'Jason Haury'
 
 

@@ -4,15 +4,8 @@ Furthermore, orderId's can now be auto-incremented by code rather than fetching 
 """
 import os
 from ib.opt import ibConnection
-from handlers import connection_handler, history_handler, order_handler, portfolio_positions_handler, \
-    account_summary_handler, account_update_handler, error_handler, market_handler
-import logging
-import utils
-from flask import current_app
 
 __author__ = 'Jason Haury'
-log = logging.getLogger(__name__)
-log = utils.setup_logger(log)
 
 # ---------------------------------------------------------------------
 # CONFIGURATION
@@ -28,35 +21,11 @@ orderId = 0
 tickerId = 0
 
 
-
 # ---------------------------------------------------------------------
 # CONNECTION
 # ---------------------------------------------------------------------
 clientId = os.getpid()
 client = ibConnection(ibgw_host, ibgw_port, clientId)
-# Enable logging if we're in debug mode
-client.register(connection_handler, 'ManagedAccounts', 'NextValidId')
-client.register(history_handler, 'HistoricalData')
-client.register(order_handler, 'OpenOrder', 'OrderStatus', 'OpenOrderEnd')
-client.register(portfolio_positions_handler, 'Position', 'PositionEnd')
-client.register(account_summary_handler, 'AccountSummary', 'AccountSummaryEnd')
-client.register(account_update_handler, 'UpdateAccountTime', 'UpdateAccountValue', 'UpdatePortfolio',
-                'AccountDownloadEnd')
-client.register(error_handler, 'Error')
-# Add handlers for feeds
-client.register(market_handler, 'TickSize', 'TickPrice')
-client.connect()
-
-def get_client():
-    """ Gets the global client and ensures it's still connected
-    """
-    if current_app.debug is True:
-        client.enableLogging()
-    log.debug('Attempting connection with client_id {}'.format(clientId))
-    # Reconnect if needed
-    if not client.isConnected():
-        client.connect()
-    return client
 
 # ---------------------------------------------------------------------
 # SYNCHRONOUS RESPONSES

@@ -2,7 +2,7 @@
 This module contains all IB client handling, even if connection will be used for a feed
 """
 # TODO remove all uses of close_client
-from globals import get_client
+from connection import get_client
 import globals as g
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
@@ -10,6 +10,9 @@ import utils
 import time
 import logging
 from datetime import datetime, timedelta
+
+
+
 
 __author__ = 'Jason Haury'
 
@@ -223,9 +226,10 @@ def get_account_summary(tags):
             and client.isConnected() is True \
             and timeout > 0:
         log.debug("Waiting for Account Summary responses on client {}...".format(client.clientId))
+        log.debug("{}".format(g.account_summary_resp))
         time.sleep(0.5)
         timeout -= 1
-    client.cancelAccountSummary(63, 1, 1)
+    client.cancelAccountSummary(1)
     #close_client(client)
     return g.account_summary_resp
 
