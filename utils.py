@@ -30,7 +30,7 @@ def setup_logger(log):
 
     # Add rotating file log handler
     hdlr = TimedRotatingFileHandler('ibrest.log', when='D', backupCount=5)
-    hdlr.setLevel(logging.INFO)
+    hdlr.setLevel(logging.DEBUG)
     hdlr.setFormatter(formatter)
     log.addHandler(hdlr)
     return log
@@ -40,6 +40,8 @@ def make_response(resp):
     """ Returns Flask tuple `resp, code` code per http://flask.pocoo.org/docs/0.10/quickstart/#about-responses
     """
     if 'errorMsg' in resp:
+        if resp['errorCode'] is None:
+            return resp, 503
         # Bad request if arg which made it to TWS wasn't right
         return resp, 400
     else:

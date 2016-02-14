@@ -14,11 +14,10 @@ from flask_restful import Resource, Api, reqparse
 # IBREST imports
 import sync, feeds
 import parsers
-import globals
 import globals as g
 import logging
-
 import utils
+
 
 # TODO use gevent to time.sleeps are non blocking
 __author__ = 'Jason Haury'
@@ -136,7 +135,7 @@ class AccountSummary(Resource):
             return dict(message=dict(tags='All tags must be from this set: {}'.format(choices))), 400
         # re-create CSV list
         tags = ','.join(list(tags))
-        log.debug('TAGS: {}'.format(tags))
+        #debug('TAGS: {}'.format(tags))
         return utils.make_response(sync.get_account_summary(tags))
 
 
