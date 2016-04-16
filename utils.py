@@ -25,7 +25,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 
 
 def setup_logger(log):
-    log.setLevel(logging.INFO)
+    log.setLevel(logging.DEBUG)
     # TODO if app in debug mode, set the debug level to DEBUG, else INFO
 
     # Add rotating file log handler
@@ -41,7 +41,7 @@ def make_response(resp):
     """
     if 'errorMsg' in resp:
         if resp['errorCode'] is None:
-            return resp, 503
+            return resp, 429
         # Bad request if arg which made it to TWS wasn't right
         return resp, 400
     else:

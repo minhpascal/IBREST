@@ -73,7 +73,7 @@ def account_update_handler(msg):
 
 
 def portfolio_positions_handler(msg):
-    """ Update our global Portfolio Positoins data response dict
+    """ Update our global Portfolio Positions data response dict
     """
     if msg.typeName == 'position':
         position = msg_to_dict(msg)
@@ -84,7 +84,7 @@ def portfolio_positions_handler(msg):
 
 
 def history_handler(msg):
-    """ Update our global Portfolio Positoins data response dict
+    """ Update our global history data response dict
     """
     history = msg_to_dict(msg)
     g.history_resp[int(history['reqId'])] = history.copy()

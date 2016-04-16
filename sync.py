@@ -81,7 +81,7 @@ def get_history(args):
 def get_open_orders():
     """ Uses reqAllOpenOrders to get all open orders from 
     """
-    client = get_client()
+    client = get_client(0)
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -104,7 +104,7 @@ def cancel_order(orderId):
     """
     g.error_resp[orderId] = None  # Reset our error for later
 
-    client = get_client()
+    client = get_client(0)
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:
@@ -145,8 +145,9 @@ def place_order(args):
     * currency
     * exchange
     """
+    log.debug('Starting place_order with args: {}'.format(args))
     # TODO do we need client 0 if we're modifying an order?
-    client = get_client()
+    client = get_client(0)
     if client is None:
         return g.error_resp[-2]
     elif client.isConnected() is False:

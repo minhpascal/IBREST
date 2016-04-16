@@ -20,7 +20,7 @@ def get_client(client_id=None):
     """ Creates a client connection to be used with orders
     """
     if client_id is None:
-        # Get client ID from our pool list in memory
+        # Get client ID from our non-order pool list in memory
         log.debug('Current clients available: {}'.format(g.clientId_pool))
         timeout = g.timeout
         while len(g.clientId_pool) == 0 and timeout > 0:
@@ -31,13 +31,34 @@ def get_client(client_id=None):
             client_id = g.clientId_pool.pop(0)
         except IndexError:
             client_id = None
+    elif client_id == 0:
+        # Special case client_id because this is for orders only
+        timeout = g.timeout
+        if g.clientId_order_in_use:
+            while g.clientId_order_in_use and timeout > 0:
+                log.info('Waiting for clientId 0 to become available...({})'.format(client_id, timeout))
+                time.sleep(0.5)
+                timeout -= 1
+        # Set order client to in use
+        if g.clientId_order_in_use is False:
+            g.clientId_order_in_use = True
+        else:
+            client_id = None
+
     else:
         # A client ID was specified, so wait for it to become available if it's not already
         # First, make sure our client_id is valid
         if client_id not in range(8):
             return
-        if client_id in g.clientId_pool:
+        timeout = g.timeout
+        while client_id not in g.clientId_pool and timeout > 0:
+            log.info('Waiting for clientId {} to become available...({})'.format(client_id, timeout))
+            time.sleep(0.5)
+            timeout -= 1
+        try:
             g.clientId_pool.pop(g.clientId_pool.index(client_id))
+        except:
+            client_id = None
 
     if client_id is None:
         return
@@ -88,6 +109,10 @@ def close_client(client):
     if client is None:
         return
     client_id = client.clientId
-    # Add our client_id onto end of our pool
-    g.clientId_pool.append(client_id)
+    # We only add non-0 clients back to our pool
+    if client_id == 0:
+        g.clientId_order_in_use = False
+    else:
+        # Add our client_id onto end of our pool
+        g.clientId_pool.append(client_id)
     return client_id

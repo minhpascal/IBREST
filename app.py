@@ -198,12 +198,16 @@ if __name__ == '__main__':
         if attr[:2] != '__':
             setattr(g, attr, getattr(globals, attr))
     '''
-    # Connect to all clients
-    for c in xrange(8):
+    log.debug('Setting up IBREST at {}:{}'.format(host, port))
+    log.debug('Using IB GW clients at: {}:{}'.format(g.client_pool[0].host, g.client_pool[0].port))
+    # Connect to all clients in our pool
+    for c in xrange(len(g.clientId_pool)+1):  # +1 for Order client
         client = g.client_pool[c]
         connection.setup_client(client)
         client.connect()
         g.client_pool[c] = client
 
+
     # TODO We _could_ run 8 processes and tie each to a different client ID, and then remove client locks as a global
-    app.run(debug=False, host=host, port=port, ssl_context=context, threaded=True)
+    #app.run(debug=False, host=host, port=port, ssl_context=context, threaded=True)
+    app.run(debug=False, host=host, port=port,  threaded=True)

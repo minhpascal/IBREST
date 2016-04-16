@@ -16,8 +16,9 @@ timeout = 20  # Max loops
 
 # Mutables
 managedAccounts = []
-clientId_pool = [0, 1, 2, 3, 4, 5, 6, 7]  # Round-robbin list of clientId's
-client_pool = {c: ibConnection(ibgw_host, ibgw_port, c) for c in xrange(8)}
+clientId_pool = [1, 2, 3, 4, 5, 6, 7]  # Round-robbin list of clientId's for non-Order tasks.  ID 0 is for orders
+clientId_order_in_use = False
+client_pool = {c: ibConnection(ibgw_host, ibgw_port, c) for c in xrange(len(clientId_pool)+1)}  # +1 for Order client
 getting_order_id = False
 orderId = 0
 tickerId = 0
@@ -27,8 +28,8 @@ tickerId = 0
 # SYNCHRONOUS RESPONSES
 # ---------------------------------------------------------------------
 # Responses.  Global dicts to use for our responses as updated by Message handlers, keyed by clientId
-portfolio_positions_resp = {c: dict() for c in xrange(8)}
-account_summary_resp = {c: dict(accountSummaryEnd=False) for c in xrange(8)}
+portfolio_positions_resp = {c: dict() for c in xrange(len(clientId_pool)+1)}
+account_summary_resp = {c: dict(accountSummaryEnd=False) for c in xrange(len(clientId_pool)+1)}
 account_update_resp = dict(accountDownloadEnd=False, updateAccountValue=dict(), updatePortfolio=[])
 # Track errors keyed in "id" which is the orderId or tickerId (or -1 for connection errors)
 error_resp = {-1: {"errorCode": 502, "errorMsg": "Couldn't connect to TWS.  Confirm that \"Enable ActiveX and Socket "
@@ -46,4 +47,4 @@ history_resp = dict()
 # FEED RESPONSE BUFFERS
 # ---------------------------------------------------------------------
 # Globals to use for feed responses
-market_resp = {c: [] for c in xrange(8)}  # market feed
+market_resp = {c: [] for c in xrange(len(clientId_pool)+1)}  # market feed
