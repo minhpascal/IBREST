@@ -209,5 +209,5 @@ if __name__ == '__main__':
 
 
     # TODO We _could_ run 8 processes and tie each to a different client ID, and then remove client locks as a global
-    #app.run(debug=False, host=host, port=port, ssl_context=context, threaded=True)
-    app.run(debug=False, host=host, port=port,  threaded=True)
+    app.run(debug=False, host=host, port=port, ssl_context=context, threaded=True)
+    #app.run(debug=False, host=host, port=port,  threaded=True)

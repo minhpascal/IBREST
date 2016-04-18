@@ -12,6 +12,9 @@ __author__ = 'Jason Haury'
 # Use environment variables
 ibgw_host = os.getenv('IBGW_HOST', '127.0.0.1')
 ibgw_port = int(os.getenv('IBGW_PORT', '4001'))  # Use 7496 for TWS
+# ibgw_host = os.getenv('IBGW_PORT_4001_TCP_ADDR', '127.0.0.1')
+# ibgw_port = int(os.getenv('IBGW_PORT_4001_TCP_PORT', '4001'))  # Use 7496 for TWS
+
 timeout = 20  # Max loops
 
 # Mutables

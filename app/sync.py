@@ -1,8 +1,9 @@
 """ Synchronous wrapper on IbPy to do heavy lifting for our Flask app.
 This module contains all IB client handling, even if connection will be used for a feed
 """
-from connection import get_client, close_client
 import globals as g
+from connection import get_client, close_client
+
 # from flask import g
 from ib.ext.Contract import Contract
 from ib.ext.Order import Order
@@ -10,7 +11,6 @@ import utils
 import time
 import logging
 from datetime import datetime, timedelta
-from flask import current_app
 
 __author__ = 'Jason Haury'
 

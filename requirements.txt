@@ -1,4 +1,3 @@
 flask
 flask-restful
 #ib is not on PyPi, but can be found in lib folder https://github.com/blampe/IbPy
-watchdog

@@ -1,8 +1,9 @@
 """ In case of IB EClientSocket requests which generate continuous feeds of data, this module will generate atom feeds.
 """
-import globals as g
-import time
 import logging
+import time
+
+import globals as g
 import utils
 from connection import get_client, close_client
 from utils import make_contract

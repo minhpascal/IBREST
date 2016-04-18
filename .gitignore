@@ -33,10 +33,10 @@ var/
 .idea
 
 # SSL HTTPS certs
-ibrest.crt
-ibrest.key
-ibrest.key.pub
-ibrest.csr
+app/ibrest.crt
+app/ibrest.key
+app/ibrest.key.pub
+app/ibrest.csr
 
 # Installer logs
 pip-log.txt
